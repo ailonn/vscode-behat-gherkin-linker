@@ -37,8 +37,8 @@ Fonctionnalité: Navigation entre steps Gherkin et définitions PHP
           }
 
           /**
-           * @When /je valide la commande "(?P<numero>[\w.]+)"/
-           * @Then /la commande "(?P<numero>[\w.]+)" est valide/
+           * @When /je valide la commande "(?P<numero>[\w.-]+)"/
+           * @Then /la commande "(?P<numero>[\w.-]+)" est valide/
            */
           public function laCommandeValidee(string $numero)
           {
@@ -56,19 +56,19 @@ Fonctionnalité: Navigation entre steps Gherkin et définitions PHP
     Quand je demande la définition de la step `Soit je suis "marie.dupont"`
     Alors l'extension résout la step à la méthode `jeSuis` de la classe `App\Behat\CommandeSteps` (`CommandeSteps.php`)
     Quand je demande la définition de la step `Quand je valide la commande "CMD-2026" avec succès`
-    Alors l'extension résout la step à la méthode `laCommandeValidee` par match non ancré (sémantique `preg_match`) : le pattern `/je valide la commande "(?P<numero>[\w.]+)"/` est trouvé en sous-chaîne, alors qu'un ancrage ^…$ échouerait sur le suffixe ` avec succès`
+    Alors l'extension résout la step à la méthode `laCommandeValidee` par match non ancré (sémantique `preg_match`) : le pattern `/je valide la commande "(?P<numero>[\w.-]+)"/` est trouvé en sous-chaîne, alors qu'un ancrage ^…$ échouerait sur le suffixe ` avec succès`
     Quand je demande la définition de la step `Quand je paie la commande "CMD-1111"`
     Alors l'extension résout la step à la méthode `jePaie` : l'expression `:param` est ancrée ^…$ avec les drapeaux `iu`, `:numero` étant remplacé par le token officiel Behat (chaîne citée, mot ou nombre)
     Quand je demande la définition de la step `Soit la commande "CMD-1111" est valide`
-    Alors l'extension résout la step à la définition `@Then /la commande "(?P<numero>[\w.]+)" est valide/`
+    Alors l'extension résout la step à la définition `@Then /la commande "(?P<numero>[\w.-]+)" est valide/`
     Et le type de mot-clé n'entre pas dans le matching : la step `Soit` se résout à une définition `@Then`, comme le runtime Behat
 
   @ac-2
   Scénario: Une définition PHP résout l'ensemble des steps et features qui correspondent (méthode à 2 annotations = 2 définitions)
     Soit `CommandeSteps.php` (FQCN `App\Behat\CommandeSteps`) dont la méthode `laCommandeValidee(string $numero)` porte 2 annotations :
       | annotation | expression |
-      | `@When` | `/je valide la commande "(?P<numero>[\w.]+)"/` |
-      | `@Then` | `/la commande "(?P<numero>[\w.]+)" est valide/` |
+      | `@When` | `/je valide la commande "(?P<numero>[\w.-]+)"/` |
+      | `@Then` | `/la commande "(?P<numero>[\w.-]+)" est valide/` |
     Et `features/commandes.feature` (Gherkin FR, `# language: fr`) contient les steps `Quand je valide la commande "CMD-2026"` et `Alors la commande "CMD-2026" est valide`
     Et `features/paiements.feature` (Gherkin FR, `# language: fr`) contient la step `Quand je valide la commande "CMD-9999"`
     Quand je demande les usages de la méthode `laCommandeValidee`

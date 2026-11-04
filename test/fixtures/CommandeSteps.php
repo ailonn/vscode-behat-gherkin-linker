@@ -12,8 +12,8 @@ class CommandeSteps
     }
 
     /**
-     * @When /je valide la commande "(?P<numero>[\w.]+)"/
-     * @Then /la commande "(?P<numero>[\w.]+)" est valide/
+     * @When /je valide la commande "(?P<numero>[\w.-]+)"/
+     * @Then /la commande "(?P<numero>[\w.-]+)" est valide/
      */
     public function laCommandeValidee(string $numero)
     {

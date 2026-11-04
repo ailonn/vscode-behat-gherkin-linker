@@ -7,15 +7,15 @@ Fonctionnalité: Info-bulle (hover) dans les deux sens
   @ac-4
   Scénario: Le survol d'une step affiche la définition (FQCN, méthode, expression, groupes nommés ↔ paramètres) et le survol d'une définition affiche ses usages
     Soit la step `Quand je valide la commande "CMD-2026"` dans `features/commandes.feature` (Gherkin FR, `# language: fr`)
-    Et la définition `@When /je valide la commande "(?P<numero>[\w.]+)"/` de la méthode `laCommandeValidee(string $numero)` de `CommandeSteps.php` (FQCN `App\Behat\CommandeSteps`)
+    Et la définition `@When /je valide la commande "(?P<numero>[\w.-]+)"/` de la méthode `laCommandeValidee(string $numero)` de `CommandeSteps.php` (FQCN `App\Behat\CommandeSteps`)
     Et la définition `@When je paie la commande :numero` de la méthode `jePaie(string $numero)`, annotée `@Transform App\Behat\Transforms\CommandeNumero`
     Quand je survole la step `Quand je valide la commande "CMD-2026"` dans l'éditeur
     Alors l'info-bulle affiche le FQCN `App\Behat\CommandeSteps`
     Et l'info-bulle affiche la méthode `laCommandeValidee`
-    Et l'info-bulle affiche l'expression `/je valide la commande "(?P<numero>[\w.]+)"/`
+    Et l'info-bulle affiche l'expression `/je valide la commande "(?P<numero>[\w.-]+)"/`
     Et l'info-bulle affiche la correspondance groupe nommé ↔ paramètre : `numero` → `$numero`
     Et le type de mot-clé de la step y figure comme métadonnée d'affichage, sans effet sur la résolution
-    Quand je survole l'annotation `@When /je valide la commande "(?P<numero>[\w.]+)"/` dans `CommandeSteps.php`
+    Quand je survole l'annotation `@When /je valide la commande "(?P<numero>[\w.-]+)"/` dans `CommandeSteps.php`
     Alors l'info-bulle affiche les usages de la définition : la step `je valide la commande "CMD-2026"` de `features/commandes.feature`
     Et l'info-bulle ne liste aucun autre usage
     Quand je survole l'annotation `@Transform App\Behat\Transforms\CommandeNumero` dans `CommandeSteps.php`

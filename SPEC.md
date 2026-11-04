@@ -136,6 +136,8 @@ qa/
   | inline flags `(?i)` `(?m)` `(?s)` | hoisted to `RegExp` flags (`i`/`m`/`s`) | ✓ (single occurrence, start of expression) |
   | `\p{…}` Unicode properties | passthrough (ES2018+); unknown property = build error → fail loud | ✓ |
   | `U` / `A` / `D` / `J` modifiers (PCRE-only) | — | ✗ fail loud |
+   | `u` / `S` modifiers (PCRE UTF8 flags) | no-op — a JS RegExp is always Unicode (mandatory `u` flag) | ✓ |
+   | `X` modifier (PCRE_EXTRA) · turnip advanced syntax (`\(` optional word, `word/word`, `\/`) | — | ✗ fail loud (never a false match) |
   | scoped flags `(?i:…)` mid-pattern | — | ✗ fail loud |
   | `\K` / `\A` / `\z` | — (JS accepts them as literal characters = silent false match) | ✗ fail loud |
   | `x` flag (ignore whitespace) | — | ✗ reported |
