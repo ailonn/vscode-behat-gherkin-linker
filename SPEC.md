@@ -57,12 +57,12 @@ One Gherkin scenario per AC in `features/`.
 |---|----|---------|
 | AC-1 | Feature→definition: a step in a `.feature` resolves to its PHP definition (regex, `:param`) — **type-agnostic matching** (Behat-verified semantics: the keyword type is not part of the match) | `features/navigation.feature` |
 | AC-2 | Definition→usages: a PHP step definition resolves to **all** matching features/steps (reverse) — a method carrying N annotations yields N definitions | `features/navigation.feature` |
-| AC-3 | Diagnostics: undefined step (error) · orphan definition (info) · duplicate definition (warning — **strictly identical pattern**, as Behat's `RedundantStepException`) | `features/diagnostics.feature` |
+| AC-3 | Diagnostics: undefined step (error) · orphan definition (info) · duplicate definition (warning — **strictly identical pattern, regardless of annotation type**, as Behat's `RedundantStepException`: matching is type-agnostic, so two definitions with the same pattern make a step ambiguous) | `features/diagnostics.feature` |
 | AC-4 | Hover: step → class (FQCN) / method / expression / named groups ↔ method parameters · definition → usages | `features/hover.feature` |
 | AC-5 | Static: indexing and navigation work in a workspace with **no PHP, no `vendor/`** | `features/static.feature` |
-| AC-6 | Gherkin **all official dialects** — FR, EN and the rest via `# language:`; keywords consumed from the parser's `dialects` export (nothing hardcoded); double quotes in step text; tested by sample (FR + EN + ≥ 1 third dialect) | `features/gherkin-dialects.feature` |
+| AC-6 | Gherkin **all official dialects** — FR, EN and the rest via `# language:`; keywords consumed from the parser's `dialects` export (nothing hardcoded); a feature **without** a `# language:` header is parsed in English (the parser's official default — documented in the README); double quotes in step text; tested by sample (FR + EN + ≥ 1 third dialect) | `features/gherkin-dialects.feature` |
 | AC-7 | Tests green in CI: the unit + integration suite covers each AC (fixtures: a generic FR PHP/Behat project, no personal data) | meta — §7 |
-| AC-8 | Packaging: `vsce` packable; settings `gherkinBehat.features` / `gherkinBehat.steps` / `gherkinBehat.orphans` | `features/packaging.feature` |
+| AC-8 | Packaging: `vsce` packable; settings `gherkinBehat.features` (glob, string or array, default `**/*.feature`) / `gherkinBehat.steps` (glob, string or array, default `**/*.php`) / `gherkinBehat.orphans` (boolean, default `true`) | `features/packaging.feature` |
 
 ## 4. Non-goals (v0)
 
