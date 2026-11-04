@@ -1,0 +1,66 @@
+{
+  "name": "gherkin-behat-linker",
+  "displayName": "Gherkin ↔ Behat Linker",
+  "description": "Bidirectional navigation between Gherkin .feature steps and Behat PHP step definitions — static analysis, zero PHP, exact Behat matching semantics",
+  "version": "0.1.0",
+  "publisher": "ailonn",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=22"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension/activation.js",
+  "contributes": {
+    "configuration": {
+      "title": "Gherkin Behat Linker",
+      "properties": {
+        "gherkinBehat.features": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "default": "**/*.feature",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob(s) of Gherkin feature files to index. vendor/ and node_modules/ are always excluded."
+        },
+        "gherkinBehat.steps": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "default": "**/*.php",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob(s) of PHP step definition files to index. vendor/ and node_modules/ are always excluded."
+        },
+        "gherkinBehat.orphans": {
+          "type": "boolean",
+          "default": true,
+          "description": "Emit info diagnostics for orphan step definitions (no matching step)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run test/unit",
+    "test:watch": "vitest test/unit"
+  },
+  "dependencies": {
+    "@cucumber/gherkin": "42.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/vscode": "^1.145.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
