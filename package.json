@@ -55,7 +55,8 @@
     "test:watch": "vitest test/unit"
   },
   "dependencies": {
-    "@cucumber/gherkin": "42.0.1"
+    "@cucumber/gherkin": "42.0.1",
+    "@cucumber/messages": "34.2.1"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
