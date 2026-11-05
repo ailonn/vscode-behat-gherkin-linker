@@ -8,8 +8,9 @@
  *   test/integration/workspace/          (generated, gitignored)
  *     ├── <test/fixtures/*>              reference mini-project, copied verbatim
  *     └── e2e/<integration fixtures>     e2e-only cases (duplicate, broken
- *                                        Gherkin, untranslatable, ambiguous)
- *                                        — never in test/fixtures/ (unit
+ *                                        Gherkin, untranslatable, ambiguous,
+ *                                        background) — never in
+ *                                        test/fixtures/ (unit
  *                                        counters stay intact)
  *
  * Two sequential launches (the workspace is generated once and reused):
