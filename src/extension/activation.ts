@@ -55,6 +55,14 @@ export class IndexService {
     }, DEBOUNCE_MS);
   }
 
+  /** Releases a pending debounce timer (idempotent — called from deactivate). */
+  dispose(): void {
+    if (this.timer !== undefined) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+  }
+
   /**
    * Full rebuild (no incremental indexing — SPEC §5 v0): glob the workspace
    * with the configured patterns (always excluding vendor/ and
@@ -176,33 +184,36 @@ function setupWatchers(
   }
 }
 
+let service: IndexService | null = null;
+
 export function activate(context: vscode.ExtensionContext): void {
-  const service = new IndexService();
+  const svc = new IndexService();
+  service = svc;
 
-  // E1 smoke command (harness proof — kept for the integration suite).
-  context.subscriptions.push(
-    vscode.commands.registerCommand("gherkinBehat.ping", () => "pong")
-  );
+  registerDefinitionProvider(context, svc);
+  registerReferenceProvider(context, svc);
+  registerHoverProvider(context, svc);
 
-  registerDefinitionProvider(context, service);
-  registerReferenceProvider(context, service);
-  registerHoverProvider(context, service);
-
-  setupWatchers(context, service);
+  setupWatchers(context, svc);
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("gherkinBehat")) {
-        setupWatchers(context, service);
-        service.schedule();
+        setupWatchers(context, svc);
+        svc.schedule();
       }
     })
   );
 
   // Initial index at activation (onStartupFinished).
-  void service.rebuild();
+  void svc.rebuild();
 }
 
 export function deactivate(): void {
-  // Watchers, listeners and the debounce timer are released with the
-  // extension context subscriptions; nothing else to close.
+  // The debounce timer is a service field, not a subscription — release it
+  // explicitly so a pending rebuild can never run on a dead context.
+  if (service !== null) {
+    service.dispose();
+    service = null;
+  }
+  // Watchers and listeners are released with the extension context.
 }

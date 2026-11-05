@@ -134,10 +134,18 @@ test("E1: e2e workspace is open (reference fixtures + e2e cases)", async () => {
   );
 });
 
-test("E1: extension activates and the command bus works (ESM main)", async () => {
+test("E1: extension activates and indexes the workspace (ESM main)", async () => {
   await waitForActivation();
-  const pong = await vscode.commands.executeCommand("gherkinBehat.ping");
-  assert.equal(pong, "pong", "gherkinBehat.ping resolves to 'pong'");
+  // Product proof, no test hook in the shipped code: activation → index
+  // build → the first diagnostic published on the reference fixture.
+  const doc = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  await waitFor(
+    "E1: undefined-step diagnostic on the reference fixture",
+    async () =>
+      vscode.languages
+        .getDiagnostics(doc.uri)
+        .some((d) => d.severity === ERROR)
+  );
 });
 
 // --- AC-1: feature → definition (SPEC §3) ----------------------------------
