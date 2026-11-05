@@ -75,6 +75,7 @@ export class IndexService {
     const steps: StepRef[] = [];
     const definitions: DefinitionRef[] = [];
     const failures: ParseFailure[] = [];
+    const lineLengths = new Map<string, readonly number[]>();
     const seen = new Set<string>();
 
     const collect = async (
@@ -94,6 +95,11 @@ export class IndexService {
           }
           const buffer = await vscode.workspace.fs.readFile(file);
           const source = new TextDecoder("utf-8").decode(buffer);
+          // Full-line diagnostic ranges: the source is already read.
+          lineLengths.set(
+            relPath,
+            source.split(/\r?\n/).map((l) => l.length)
+          );
           if (isFeature) {
             const parsed = await parseFeature(source, relPath);
             if (parsed.ok) {
@@ -120,7 +126,13 @@ export class IndexService {
 
     this.index = buildIndex(steps, definitions);
     this.failures = failures;
-    publishDiagnostics(this.index, settings.orphans, this.failures, root);
+    publishDiagnostics(
+      this.index,
+      settings.orphans,
+      this.failures,
+      root,
+      lineLengths
+    );
   }
 }
 

@@ -20,6 +20,7 @@
  */
 import * as vscode from "vscode";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { access, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -95,6 +96,20 @@ function hoverText(hovers) {
 const ERROR = vscode.DiagnosticSeverity.Error;
 const WARNING = vscode.DiagnosticSeverity.Warning;
 const INFO = vscode.DiagnosticSeverity.Information;
+
+/**
+ * The squiggle spans the whole flagged line (day-1 signal): the range
+ * starts at column 0 and ends at the actual line length of the source.
+ */
+function assertFullLineRange(root, relPath, d) {
+  const line =
+    readFileSync(join(root, relPath), "utf8")
+      .split(/\r?\n/)[d.range.start.line] ?? "";
+  // vscode.Position exposes `character` (not LSP's `column`).
+  assert.equal(d.range.start.character, 0, "range starts at column 0");
+  assert.equal(d.range.end.line, d.range.start.line, "range stays on the flagged line");
+  assert.equal(d.range.end.character, line.length, "range ends at the line length");
+}
 
 // --- E1 smoke (harness proof, not an AC) ----------------------------------
 
@@ -188,6 +203,7 @@ test("AC-3: undefined step → error diagnostic (commandes.feature line 12)", as
   assert.equal(errors.length, 1, "exactly one undefined step in the reference");
   assert.equal(errors[0].range.start.line, 11, "line 12 (1-based) = 11 (0-based)");
   assert.match(errors[0].message, /undefined/i, "message says the step is undefined");
+  assertFullLineRange(workspaceRoot().fsPath, "commandes.feature", errors[0]);
 });
 
 test("AC-3: orphan definition → info diagnostic (CommandeSteps.php line 31)", async () => {
@@ -201,12 +217,16 @@ test("AC-3: orphan definition → info diagnostic (CommandeSteps.php line 31)", 
   const infos = vscode.languages
     .getDiagnostics(php.uri)
     .filter((d) => d.severity === INFO);
+  const orphan = infos.find(
+    (d) => d.range.start.line === 30 && /orphan/i.test(d.message)
+  );
   assert.ok(
-    infos.some((d) => d.range.start.line === 30 && /orphan/i.test(d.message)),
+    orphan,
     `orphan info at line 30 (0-based): ${JSON.stringify(
       infos.map((d) => [d.range.start.line, d.message])
     )}`
   );
+  assertFullLineRange(workspaceRoot().fsPath, "CommandeSteps.php", orphan);
   // no duplicate warnings anywhere in the reference PHP files (0 duplicates)
   for (const f of ["CommandeSteps.php", "OrderSteps.php", "BestellungSteps.php"]) {
     const d = await vscode.workspace.openTextDocument(docUri(f));
@@ -232,6 +252,7 @@ test("AC-3: duplicate definitions → warning diagnostics (e2e fixture)", async 
   assert.deepEqual(lines, [7, 14], "both annotation lines flagged (0-based)");
   for (const d of warnings) {
     assert.match(d.message, /duplicate/i, "message says the definition is duplicated");
+    assertFullLineRange(workspaceRoot().fsPath, "e2e/DoublonSteps.php", d);
   }
 });
 
@@ -250,6 +271,7 @@ test("AC-3: untranslatable expression → info diagnostic WITH the reason (e2e f
     .filter((d) => d.severity === INFO && /\\K|not supported/i.test(d.message));
   assert.ok(diag.length >= 1, "the untranslatable diagnostic exists");
   assert.equal(diag[0].range.start.line, 7, "annotation line 8 (1-based) = 7 (0-based)");
+  assertFullLineRange(workspaceRoot().fsPath, "e2e/UntranslatableSteps.php", diag[0]);
 });
 
 test("AC-3: unparseable Gherkin → error diagnostic (e2e fixture)", async () => {
@@ -269,6 +291,7 @@ test("AC-3: unparseable Gherkin → error diagnostic (e2e fixture)", async () =>
     4,
     "the parser-reported line (5: in the reason) = 4 (0-based)"
   );
+  assertFullLineRange(workspaceRoot().fsPath, "e2e/broken.feature", errors[0]);
 });
 
 // --- AC-4: hover (both directions) ------------------------------------------

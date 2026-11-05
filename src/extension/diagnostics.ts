@@ -10,6 +10,9 @@
  *    in the message (fail loud)
  * 5. unparseable Gherkin → ERROR at the parser-reported line (line 0 if
  *    the parser gives none)
+ *
+ * Ranges span the whole flagged line (the squiggle is the day-1 signal) —
+ * line lengths come from the sources read at rebuild time.
  */
 import * as vscode from "vscode";
 import type { Index } from "../core/types.js";
@@ -45,7 +48,9 @@ export function publishDiagnostics(
   index: Index,
   orphansEnabled: boolean,
   parseFailures: readonly ParseFailure[],
-  root: vscode.Uri
+  root: vscode.Uri,
+  /** Line lengths per source file (0-based) — full-line diagnostic ranges. */
+  lineLengths: ReadonlyMap<string, readonly number[]>
 ): void {
   const byUri = new Map<string, vscode.Diagnostic[]>();
   const add = (
@@ -56,9 +61,12 @@ export function publishDiagnostics(
   ): void => {
     const uri = vscode.Uri.joinPath(root, relPath).toString();
     const list = byUri.get(uri) ?? [];
+    // The squiggle spans the whole flagged line; the source is always read
+    // at rebuild time (fallback: one character).
+    const length = lineLengths.get(relPath)?.[line0] ?? 1;
     list.push(
       new vscode.Diagnostic(
-        new vscode.Range(line0, 0, line0, 1),
+        new vscode.Range(line0, 0, line0, length),
         message,
         severity
       )
