@@ -4,8 +4,9 @@
 > (Qualité Analyst + scoped technical expert — 3 convergent BLOQUANT findings corrected,
 > NON BLOQUANTs E4–E13 integrated) with PO decisions: **type-agnostic matching** (faithful
 > to the Behat runtime) · **no Cucumber Expressions in v0** (Behat does not support them) ·
-> **all official Gherkin dialects** (sampled tests). **Pending PO final validation** of this
-> spec + the `features/` lot — the gate before any code.
+> **all official Gherkin dialects** (sampled tests). **Validated** — PO final
+> validation of this spec + the `features/` lot passed (2026-11-04); changes now
+> go through the phase challenge gate.
 > The Gherkin features in `features/` (French, official dialect) are the executable form
 > of the acceptance criteria in §3: one scenario per AC. Code and tests must satisfy
 > both.
