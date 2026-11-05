@@ -287,8 +287,20 @@ test("AC-4: hover on a step → FQCN, method, expression (with named groups)", a
     text = hoverText(hovers);
     return text.includes("App\\Behat\\CommandeSteps");
   });
+  // The executeHoverProvider round trip serializes the markdown
+  // (`*` → `\*`, spaces → `&nbsp;`) — normalize back to the raw value
+  // before asserting on the contract (code blocks pass through untouched).
+  const plain = text.replace(/&nbsp;/g, " ").replace(/\\\*/g, "*");
   assert.ok(text.includes("laCommandeValidee"), "method name in the hover");
   assert.ok(text.includes("numero"), "named group ↔ parameter shown");
+  assert.ok(
+    plain.includes("step keyword:* Quand"),
+    "the step keyword as display metadata (hover.feature)"
+  );
+  assert.ok(
+    !plain.includes("string $"),
+    "no fabricated parameter types — the scanner drops them by design"
+  );
 });
 
 test("AC-4: hover on a definition → its usages", async () => {
