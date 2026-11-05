@@ -8,7 +8,7 @@
   "type": "module",
   "engines": {
     "vscode": "^1.90.0",
-    "node": ">=22"
+    "node": ">=20"
   },
   "categories": [
     "Other"
@@ -35,7 +35,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Glob(s) of Gherkin feature files to index. vendor/ and node_modules/ are always excluded."
+          "description": "Glob(s) of Gherkin feature files to index. vendor/ and node_modules/ are always excluded. v0: only the first workspace root is indexed."
         },
         "gherkinBehat.steps": {
           "type": [
@@ -46,7 +46,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Glob(s) of PHP step definition files to index. vendor/ and node_modules/ are always excluded."
+          "description": "Glob(s) of PHP step definition files to index. vendor/ and node_modules/ are always excluded. v0: only the first workspace root is indexed."
         },
         "gherkinBehat.orphans": {
           "type": "boolean",

@@ -91,13 +91,13 @@ src/
     matcher.ts     # Behat semantics: type-agnostic, unanchored regex, anchored :param, named groups
     index.ts       # pure build: (StepRef[], DefinitionRef[]) → Index; rebuild
   extension/       # imperative shell — the only code importing `vscode`
-    activation.ts  # watchers (debounce/single-flight), index (re)build,
+    activation.ts  # watchers (debounce, coalesced, last-wins token), index (re)build,
                    #   diagnostics publication (incl. unparseable Gherkin)
     definition.ts  # DefinitionProvider (feature → php)
     references.ts  # ReferenceProvider (php → features)
     hover.ts       # HoverProvider (both directions)
     diagnostics.ts # undefined (error) / orphan (info) / duplicate (warning)
-  settings.ts      # gherkinBehat.features / .steps / .orphans
+  settings.ts      # gherkinBehat.enabled / .features / .steps / .orphans
 test/
   unit/            # vitest — core only, fixtures in test/fixtures/
   integration/     # @vscode/test-electron — providers + diagnostics + reloadWindow
@@ -163,8 +163,10 @@ qa/
   - **`@Transform`** (the Behat annotation — `@paramType` belongs to Cucumber-JVM) is
     parsed and displayed, not evaluated (§4).
 - **Full index rebuild on change** in v0 (no incremental) — simplicity first; the shell
-  **debounces and single-flights** rebuilds; the glob for features/steps **excludes
-  `vendor/` and `node_modules/`**. Budgets: reference fixture of fixed size
+  **debounces and coalesces** rebuilds (last-wins token: a stale build never overwrites
+  a fresher one); the glob for features/steps **excludes `vendor/` and `node_modules/`**
+  (index queries and watcher events). **v0 limitation: only the first workspace root is
+  indexed** — multi-root workspaces are not supported yet. Budgets: reference fixture of fixed size
   (N steps / M definitions / K features) → **wall-time < 500 ms, asserted in unit
   tests**; stress 1 000 × 1 000 (chat-noir case) → no crash + its own wall-time budget,
   set on the first measured run and locked in CI.

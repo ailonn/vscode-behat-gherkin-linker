@@ -3,8 +3,8 @@
  *
  * The only code that imports `vscode`: it reads the workspace with the
  * configured globs, builds the pure core index, and keeps it fresh through
- * debounced, single-flight rebuilds on file changes (SPEC §5 v0 decisions:
- * full rebuild, debounce + single-flight, `vendor/` + `node_modules/`
+ * debounced, coalesced rebuilds on file changes (SPEC §5 v0 decisions:
+ * full rebuild, debounce + last-wins token, `vendor/` + `node_modules/`
  * always excluded). Diagnostics publication and the navigation providers
  * build on this service.
  */
@@ -30,9 +30,9 @@ const DEBOUNCE_MS = 300;
 /**
  * The index service: workspace reading + pure core build.
  *
- * Single-flight: scheduled rebuilds coalesce (debounce), and an in-flight
- * rebuild is superseded by a newer one (token) — a stale build never
- * overwrites a fresh one.
+ * Coalesced rebuilds: scheduled rebuilds debounce into a single build, and
+ * a last-wins token guarantees a stale build never overwrites a fresher one
+ * (in-flight runs may overlap; only the newest result is published).
  */
 export class IndexService {
   private index: Index | null = null;
@@ -127,7 +127,7 @@ export class IndexService {
     await collect(settings.features, true);
     await collect(settings.steps, false);
 
-    // Single-flight: a newer rebuild superseded this one — drop the result.
+    // Last-wins: a newer rebuild superseded this one — drop the result.
     if (token !== this.buildToken) {
       return;
     }
