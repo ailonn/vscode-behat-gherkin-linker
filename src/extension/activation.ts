@@ -22,6 +22,7 @@ import {
 } from "./diagnostics.js";
 import { registerDefinitionProvider } from "./definition.js";
 import { registerReferenceProvider } from "./references.js";
+import { registerHoverProvider } from "./hover.js";
 
 /** Debounce window for rebuilds (watcher events coalesce into one build). */
 const DEBOUNCE_MS = 300;
@@ -166,6 +167,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   registerDefinitionProvider(context, service);
   registerReferenceProvider(context, service);
+  registerHoverProvider(context, service);
 
   setupWatchers(context, service);
   context.subscriptions.push(
