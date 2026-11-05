@@ -10,9 +10,9 @@
  *   false match.
  */
 import * as vscode from "vscode";
-import { posix } from "node:path";
 import { definitionKey, stepKey } from "../core/types.js";
 import type { DefinitionRef, Index } from "../core/types.js";
+import { relativeToRoot } from "./workspace.js";
 
 const SELECTOR: vscode.DocumentSelector = [
   { scheme: "file", language: "gherkin" },
@@ -71,7 +71,7 @@ export function registerHoverProvider(
       if (!index || !root) {
         return undefined;
       }
-      const relPath = relativePath(root, document.uri);
+      const relPath = relativeToRoot(root.fsPath, document.uri.fsPath);
       if (relPath === undefined) {
         return undefined;
       }
@@ -126,14 +126,5 @@ export function registerHoverProvider(
     },
   };
   context.subscriptions.push(vscode.languages.registerHoverProvider(SELECTOR, provider));
-}
-
-/** Workspace-root-relative path (forward slashes) or undefined outside. */
-function relativePath(root: vscode.Uri, uri: vscode.Uri): string | undefined {
-  const rel = posix.relative(root.fsPath, uri.fsPath);
-  if (rel.startsWith("..") || posix.isAbsolute(rel)) {
-    return undefined;
-  }
-  return rel;
 }
 

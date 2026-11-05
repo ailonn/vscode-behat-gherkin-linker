@@ -9,7 +9,6 @@
  * build on this service.
  */
 import * as vscode from "vscode";
-import { posix } from "node:path";
 import { buildIndex } from "../core/index.js";
 import { parseFeature } from "../core/gherkin.js";
 import { scanPhp } from "../core/php.js";
@@ -23,21 +22,10 @@ import {
 import { registerDefinitionProvider } from "./definition.js";
 import { registerReferenceProvider } from "./references.js";
 import { registerHoverProvider } from "./hover.js";
+import { isExcludedPath, relativeToRoot } from "./workspace.js";
 
 /** Debounce window for rebuilds (watcher events coalesce into one build). */
 const DEBOUNCE_MS = 300;
-
-/**
- * Workspace-root-relative path (forward slashes) — the shape carried by
- * the core refs — or undefined outside the workspace root.
- */
-function relativeToWorkspace(root: vscode.Uri, uri: vscode.Uri): string | undefined {
-  const rel = posix.relative(root.fsPath, uri.fsPath);
-  if (rel.startsWith("..") || posix.isAbsolute(rel)) {
-    return undefined;
-  }
-  return rel;
-}
 
 /**
  * The index service: workspace reading + pure core build.
@@ -99,7 +87,7 @@ export class IndexService {
             continue;
           }
           seen.add(file.fsPath);
-          const relPath = relativeToWorkspace(root, file);
+          const relPath = relativeToRoot(root.fsPath, file.fsPath);
           if (relPath === undefined) {
             continue;
           }
@@ -149,9 +137,24 @@ function setupWatchers(
   const settings = readSettings();
   for (const pattern of [...settings.features, ...settings.steps]) {
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-    watcher.onDidCreate(() => service.schedule());
-    watcher.onDidChange(() => service.schedule());
-    watcher.onDidDelete(() => service.schedule());
+    // The watcher API has no exclude parameter — filter the always-excluded
+    // segments (SPEC §5) on the events (a `composer install` must not
+    // trigger rebuilds).
+    watcher.onDidCreate((file) => {
+      if (!isExcludedPath(file.fsPath)) {
+        service.schedule();
+      }
+    });
+    watcher.onDidChange((file) => {
+      if (!isExcludedPath(file.fsPath)) {
+        service.schedule();
+      }
+    });
+    watcher.onDidDelete((file) => {
+      if (!isExcludedPath(file.fsPath)) {
+        service.schedule();
+      }
+    });
     context.subscriptions.push(watcher);
     watchers.push(watcher);
   }

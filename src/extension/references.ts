@@ -7,9 +7,9 @@
  * cursor resolves here.
  */
 import * as vscode from "vscode";
-import { posix } from "node:path";
 import { definitionKey } from "../core/types.js";
 import type { Index } from "../core/types.js";
+import { relativeToRoot } from "./workspace.js";
 
 const PHP_SELECTOR: vscode.DocumentSelector = [
   { scheme: "file", language: "php" },
@@ -31,7 +31,7 @@ export function registerReferenceProvider(
       if (!index || !root) {
         return [];
       }
-      const relPath = relativePath(root, document.uri);
+      const relPath = relativeToRoot(root.fsPath, document.uri.fsPath);
       if (relPath === undefined) {
         return [];
       }
@@ -54,13 +54,4 @@ export function registerReferenceProvider(
   context.subscriptions.push(
     vscode.languages.registerReferenceProvider(PHP_SELECTOR, provider)
   );
-}
-
-/** Workspace-root-relative path (forward slashes) or undefined outside. */
-function relativePath(root: vscode.Uri, uri: vscode.Uri): string | undefined {
-  const rel = posix.relative(root.fsPath, uri.fsPath);
-  if (rel.startsWith("..") || posix.isAbsolute(rel)) {
-    return undefined;
-  }
-  return rel;
 }
