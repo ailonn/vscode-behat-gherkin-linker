@@ -143,6 +143,8 @@ qa/
   | `x` flag (ignore whitespace) | — | ✗ reported |
   | possessive quantifiers `a++` / `a*+` | — | ✗ reported |
   | atomic groups `(?>…)` | — | ✗ reported |
+  | `\x{…}` (Unicode codepoint escape) | — (JS uses `\u{…}`) | ✗ fail loud (reported v0.1.1) |
+  | `i` flag (case folding) | JS folds accents (JÉRÔME ~ jérôme); PCRE without UCP = ASCII only | ✓ (declared divergence) |
 
   **Fail loud**: an expression that cannot be translated is indexed with an
   `untranslatable: <reason>` flag — the step is **not** matched (never a false match),

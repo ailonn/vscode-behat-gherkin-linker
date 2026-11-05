@@ -90,7 +90,9 @@ function compileTurnip(expression: string): CompiledDefinition {
 
   for (const name of names) {
     // PCRE named groups must start with a letter or underscore — `:30`
-    // (e.g. in "l'heure est 12:30") is rejected by Behat at registration.
+    // (e.g. in "l'heure est 12:30") is registered by Behat but never matches
+    // (the preg compilation fails at match time); rejected here earlier with
+    // an explicit diagnostic.
     if (!/^[A-Za-z_]/.test(name)) {
       return untranslatable(`token name must start with a letter or underscore (PCRE named-group rule): "${name}"`);
     }

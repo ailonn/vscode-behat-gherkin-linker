@@ -216,6 +216,8 @@ function parseAnnotations(lines: readonly string[], start: number, end: number):
       continue;
     }
 
+    // Multiple @Transform in one docblock: the first wins (declared
+    // deviation, locked in php.test.ts rule 6).
     const t = TRANSFORM_ANNOTATION.exec(content);
     if (t !== null && transform === undefined) {
       transform = t[1];
