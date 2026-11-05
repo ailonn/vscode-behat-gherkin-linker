@@ -142,6 +142,16 @@ describe("pcre — named groups & backreferences (SPEC §5 table)", () => {
     expect(ok("/(?<!foo)bar/").test("xxbar")).toBe(true);
     expect(ok("/(?<!foo)bar/").test("foobar")).toBe(false);
   });
+
+  it("accepts a capture group whose text starts with a capital P (e.g. (Paris))", () => {
+    const re = ok("/(Paris)/"); // was rejected by the (?P… guard before the fix
+    expect(re.test("xParisx")).toBe(true); // unanchored (SPEC §5) — the group matches inside longer text
+    expect(re.test("xparisx")).toBe(false); // case-sensitive (no i flag) — a real negative case
+  });
+
+  it("rejects (?Pabc) with the explicit named-group guard (not the JS constructor error)", () => {
+    expect(rejected("/(?Pabc)x/")).toContain("named-group");
+  });
 });
 
 describe("pcre — inline flags (SPEC §5 table: single leading occurrence only)", () => {
@@ -240,10 +250,16 @@ describe("pcre — fail loud (SPEC §5: never a RegExp, never a false match)", (
     expect(rejected("/\\ux/")).toContain("\\u");
   });
 
-  it("translates the PCRE word-boundary escapes \\\\> and \\\\< to \\\\b (identical assertion)", () => {
-    expect(ok("/\\<x/").test("foo x")).toBe(true);
+  it("translates \\< and \\> to the literal < and > (PCRE2 — not word boundaries)", () => {
+    // PCRE2: \< and \> are the LITERAL characters < and >, not word boundaries
+    // (verified 2026-11-04 with grep -P/libpcre2 and the PCRE2 manual:
+    // backslash + non-alphanumeric = literal; the only word-boundary
+    // compatibility is the POSIX [:<:]/[>:] classes).
+    expect(ok("/\\<x/").test("foo x")).toBe(false); // discriminator: the old \b mapping matched
+    expect(ok("/\\<x/").test("<x")).toBe(true);
     expect(ok("/\\<x/").test("foox")).toBe(false);
-    expect(ok("/x\\>/").test("x y")).toBe(true);
+    expect(ok("/x\\>/").test("x y")).toBe(false); // discriminator: the old \b mapping matched
+    expect(ok("/x\\>/").test("x>")).toBe(true);
     expect(ok("/x\\>/").test("xy")).toBe(false);
   });
 

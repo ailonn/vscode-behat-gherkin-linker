@@ -250,9 +250,11 @@ function scanAndRewrite(body: string): { body: string; problem: string | null } 
             };
           }
         } else if (next === "<" || next === ">") {
-          // PCRE word-boundary escapes — the JS \b assertion is the identical
-          // semantics (outside a class; inside a class they stay literal).
-          out += "\\b";
+          // PCRE2: \< and \> are the LITERAL characters < and >, not word
+          // boundaries (verified 2026-11-04 with grep -P/libpcre2 and the
+          // PCRE2 manual: backslash + non-alphanumeric = literal; the only
+          // word-boundary compatibility is the POSIX [:<:]/[>:] classes).
+          out += next;
           i += 1;
           continue;
         } else if (/[A-Za-z]/.test(next) && !WHITELISTED_LETTER_ESCAPES.has(next)) {
@@ -295,7 +297,7 @@ function scanAndRewrite(body: string): { body: string; problem: string | null } 
       if (rest.startsWith("^")) {
         return { body: "", problem: "PCRE flag reset (?^) is not supported by JS" };
       }
-      if (rest.startsWith("P")) {
+      if (rest.startsWith("?P") && rest.charAt(2) !== "<" && rest.charAt(2) !== "=") {
         return { body: "", problem: "malformed PCRE named-group construct (?P…)" };
       }
       let j = 1;
