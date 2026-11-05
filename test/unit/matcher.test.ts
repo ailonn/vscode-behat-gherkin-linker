@@ -28,8 +28,8 @@
  *    https://github.com/Behat/Behat/blob/3.x/src/Behat/Behat/Definition/Search/RepositorySearchEngine.php
  */
 import { describe, expect, it } from "vitest";
-import type { CompiledDefinition } from "../../src/core/types";
-import { compileExpression, matches, namedGroups } from "../../src/core/matcher";
+import type { CompiledDefinition } from "../../src/core/types.js";
+import { compileExpression, matches, namedGroups } from "../../src/core/matcher.js";
 
 describe("matcher — classification (Behat RegexPatternPolicy::supportsPattern)", () => {
   it("treats a /…/ pattern as a regex", () => {

@@ -8,7 +8,7 @@
  * pattern silently matches the literal text "Kabc").
  */
 import { describe, expect, it } from "vitest";
-import { isRegexPattern, translatePcre } from "../../src/core/pcre";
+import { isRegexPattern, translatePcre } from "../../src/core/pcre.js";
 
 /** Translates, asserting the expression IS translatable (returns the RegExp). */
 function ok(pattern: string): RegExp {

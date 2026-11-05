@@ -58,6 +58,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck:all": "tsc -p tsconfig.test.json",
     "test": "vitest run test/unit",
     "test:watch": "vitest test/unit",
     "test:integration": "npm run build && node test/integration/runner.mjs"
