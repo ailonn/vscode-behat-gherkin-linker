@@ -311,6 +311,25 @@ describe("scanPhp — rule 6: @Transform", () => {
     expect(defs).toHaveLength(2);
     expect(defs.map((d) => d.transform)).toEqual(["App\\T", "App\\T"]);
   });
+
+  it("multiple @Transform in one docblock: the first wins (declared deviation, locked)", () => {
+    const source = php(
+      "<?php",
+      "class T",
+      "{",
+      "    /**",
+      "     * @Given a",
+      "     * @Transform App\\First",
+      "     * @Transform App\\Second",
+      "     */",
+      "    public function f()",
+      "    {",
+      "    }",
+      "}"
+    );
+    const [def] = scan(source);
+    expect(def.transform).toBe("App\\First");
+  });
 });
 
 describe("scanPhp — rule 7: silence", () => {
@@ -464,6 +483,24 @@ describe("scanPhp — documented limitations (SPEC §4/§5)", () => {
     );
     const [def] = scan(source);
     expect(def.fqcn).toBe("FinalSteps");
+    expect(def.method).toBe("f");
+  });
+
+  it("an abstract class is indexed (final/abstract modifiers tolerated)", () => {
+    const source = php(
+      "<?php",
+      "abstract class AbstractSteps",
+      "{",
+      "    /**",
+      "     * @Given /x/",
+      "     */",
+      "    public function f()",
+      "    {",
+      "    }",
+      "}"
+    );
+    const [def] = scan(source);
+    expect(def.fqcn).toBe("AbstractSteps");
     expect(def.method).toBe("f");
   });
 

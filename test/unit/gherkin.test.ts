@@ -185,6 +185,24 @@ describe("R5 — unparseable Gherkin → error result, never an exception", () =
     expect(result.error).toMatch(/\(5:/);
   });
 
+  it("an invalid keyword in description position (before any step) is valid grammar (lenient, locked)", async () => {
+    // R5 lenient: a non-keyword line before any step is a scenario description
+    // (the parser grammar is lenient there) — see the note above BAD_KEYWORD_SOURCE.
+    const source = [
+      "Feature: Lenient",
+      "",
+      "  Scenario: Description first",
+      "    Toto n'est pas un mot-clé",
+      "    Given a valid step",
+    ].join("\n");
+    const result = await parseFeature(source, "test/fixtures/lenient.feature");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.steps.map((s) => [s.line, s.keyword, s.text])).toEqual([
+      [5, "Given", "a valid step"],
+    ]);
+  });
+
   it("an unknown language yields an error result naming the language", async () => {
     const result = await parseFeature(
       "# language: zz\nFeature: Nothing\n",
@@ -228,5 +246,27 @@ describe("R6 — path carried by every StepRef", () => {
     if (!result.ok) {
       expect(result.path).toBe("x.feature");
     }
+  });
+});
+
+describe("Background — every Background step is a StepRef (declared design, locked)", () => {
+  it("a Background's steps are indexed line by line, before the scenario steps", async () => {
+    const source = [
+      "# language: en",
+      "Feature: With background",
+      "",
+      "  Background:",
+      "    Given a context step",
+      "",
+      "  Scenario: S",
+      "    When an action",
+    ].join("\n");
+    const result = await parseFeature(source, "test/fixtures/background.feature");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.steps.map((s) => [s.line, s.keyword, s.text])).toEqual([
+      [5, "Given", "a context step"],
+      [8, "When", "an action"],
+    ]);
   });
 });

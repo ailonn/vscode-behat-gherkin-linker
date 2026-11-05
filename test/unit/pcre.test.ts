@@ -250,6 +250,10 @@ describe("pcre — fail loud (SPEC §5: never a RegExp, never a false match)", (
     expect(rejected("/\\ux/")).toContain("\\u");
   });
 
+  it("rejects \\x{…} (PCRE codepoint escape — JS uses \\u{…}; reported v0.1.1, SPEC §5)", () => {
+    expect(rejected("/\\x{2603}/")).toContain("\\x");
+  });
+
   it("translates \\< and \\> to the literal < and > (PCRE2 — not word boundaries)", () => {
     // PCRE2: \< and \> are the LITERAL characters < and >, not word boundaries
     // (verified 2026-11-04 with grep -P/libpcre2 and the PCRE2 manual:
