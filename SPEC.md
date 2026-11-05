@@ -202,5 +202,6 @@ Scorecard: one page per cycle (see the skill). **KPI**: decreasing manual time p
 - **v0.1.0** · SemVer from v0.1.0 · CHANGELOG from v2 · **MIT**
 - Distribution: **GitHub only** (vsix in Releases) — marketplaces are a later decision
 - README (EN): problem, state-of-the-art positioning (§2), install (vsix), configuration,
+  limitations (docblock-only — PHP 8 attributes `#[When]` are not indexed, §4),
   a "specified in Gherkin" section pointing at `features/`
 - v0 = single maintainer, no community contributions (the flow is defined at the first PR)
