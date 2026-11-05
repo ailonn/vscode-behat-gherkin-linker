@@ -64,7 +64,8 @@ export class IndexService {
     const token = ++this.buildToken;
     const settings = readSettings();
     const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-    if (!root) {
+    if (!settings.enabled || !root) {
+      // Extension disabled (or no workspace): no index, no diagnostics.
       this.index = null;
       this.failures = [];
       clearDiagnostics();
@@ -135,6 +136,9 @@ function setupWatchers(
   }
   watchers = [];
   const settings = readSettings();
+  if (!settings.enabled) {
+    return;
+  }
   for (const pattern of [...settings.features, ...settings.steps]) {
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
     // The watcher API has no exclude parameter — filter the always-excluded

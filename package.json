@@ -21,6 +21,11 @@
     "configuration": {
       "title": "Gherkin Behat Linker",
       "properties": {
+        "gherkinBehat.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Index the workspace (navigation + diagnostics). Set to false to turn the extension off — no file is read, no diagnostic is emitted."
+        },
         "gherkinBehat.features": {
           "type": [
             "string",
