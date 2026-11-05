@@ -13,7 +13,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension/activation.js",
   "contributes": {
     "configuration": {
@@ -52,7 +54,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run test/unit",
-    "test:watch": "vitest test/unit"
+    "test:watch": "vitest test/unit",
+    "test:integration": "npm run build && node test/integration/runner.mjs"
   },
   "dependencies": {
     "@cucumber/gherkin": "42.0.1",
@@ -61,6 +64,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/vscode": "^1.145.0",
+    "@vscode/test-electron": "^3.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }
