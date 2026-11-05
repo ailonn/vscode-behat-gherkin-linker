@@ -20,6 +20,7 @@ import {
   clearDiagnostics,
   publishDiagnostics,
 } from "./diagnostics.js";
+import { registerDefinitionProvider } from "./definition.js";
 
 /** Debounce window for rebuilds (watcher events coalesce into one build). */
 const DEBOUNCE_MS = 300;
@@ -161,6 +162,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("gherkinBehat.ping", () => "pong")
   );
+
+  registerDefinitionProvider(context, service);
 
   setupWatchers(context, service);
   context.subscriptions.push(
