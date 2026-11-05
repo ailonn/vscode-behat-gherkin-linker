@@ -15,6 +15,11 @@ import { parseFeature } from "../core/gherkin.js";
 import { scanPhp } from "../core/php.js";
 import type { DefinitionRef, Index, StepRef } from "../core/types.js";
 import { ALWAYS_EXCLUDED, readSettings } from "../settings.js";
+import {
+  type ParseFailure,
+  clearDiagnostics,
+  publishDiagnostics,
+} from "./diagnostics.js";
 
 /** Debounce window for rebuilds (watcher events coalesce into one build). */
 const DEBOUNCE_MS = 300;
@@ -40,6 +45,7 @@ function relativeToWorkspace(root: vscode.Uri, uri: vscode.Uri): string | undefi
  */
 export class IndexService {
   private index: Index | null = null;
+  private failures: readonly ParseFailure[] = [];
   private buildToken = 0;
   private timer: NodeJS.Timeout | undefined;
 
@@ -69,11 +75,14 @@ export class IndexService {
     const root = vscode.workspace.workspaceFolders?.[0]?.uri;
     if (!root) {
       this.index = null;
+      this.failures = [];
+      clearDiagnostics();
       return;
     }
 
     const steps: StepRef[] = [];
     const definitions: DefinitionRef[] = [];
+    const failures: ParseFailure[] = [];
     const seen = new Set<string>();
 
     const collect = async (
@@ -97,9 +106,11 @@ export class IndexService {
             const parsed = await parseFeature(source, relPath);
             if (parsed.ok) {
               steps.push(...parsed.steps);
+            } else {
+              // ok:false (unparseable Gherkin) becomes a diagnostic —
+              // never a crash.
+              failures.push({ path: relPath, error: parsed.error });
             }
-            // ok:false (unparseable Gherkin) becomes a diagnostic —
-            // published by the diagnostics slice, never a crash.
           } else {
             definitions.push(...scanPhp(source, relPath));
           }
@@ -116,6 +127,8 @@ export class IndexService {
     }
 
     this.index = buildIndex(steps, definitions);
+    this.failures = failures;
+    publishDiagnostics(this.index, settings.orphans, this.failures, root);
   }
 }
 
