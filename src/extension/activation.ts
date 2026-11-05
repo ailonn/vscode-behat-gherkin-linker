@@ -21,6 +21,7 @@ import {
   publishDiagnostics,
 } from "./diagnostics.js";
 import { registerDefinitionProvider } from "./definition.js";
+import { registerReferenceProvider } from "./references.js";
 
 /** Debounce window for rebuilds (watcher events coalesce into one build). */
 const DEBOUNCE_MS = 300;
@@ -164,6 +165,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   registerDefinitionProvider(context, service);
+  registerReferenceProvider(context, service);
 
   setupWatchers(context, service);
   context.subscriptions.push(
