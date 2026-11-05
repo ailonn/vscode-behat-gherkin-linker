@@ -197,9 +197,9 @@ export function translatePcre(expression: string): PcreResult {
     body = body.slice(leading[0].length);
   }
 
-  // PCRE named groups → JS named groups (SPEC §5 table).
-  body = body.replace(/\(\?P</g, "(?<");
-  body = body.replace(/\(\?P=([A-Za-z_][A-Za-z0-9_]*)\)/g, "\\k<$1>");
+  // PCRE named groups (?P<name> / (?P=name) → JS (?<name> / \k<name>) are
+  // handled by scanAndRewrite — it is character-class aware, where a global
+  // rewrite is not (inside a class the construct is literal text).
 
   const scan = scanAndRewrite(body);
   if (scan.problem) {
@@ -224,7 +224,10 @@ const FLAG_CONSTRUCT_CHARS = "-imsxuadjuXU";
  * Left-to-right scan of the translated body:
  * - rejects PCRE constructs with no faithful JS equivalent (fail loud, SPEC §5);
  * - rewrites `\K`/`\A`/`\z`/`\Z` inside a character class to the literal
- *   character (PCRE semantics; JS-u rejects the escape).
+ *   character (PCRE semantics; JS-u rejects the escape);
+ * - rewrites PCRE named groups `(?P<name>` → `(?<name>` and `(?P=name)`
+ *   → `\k<name>`, rejecting invalid name shapes (PCRE2: a name must start
+ *   with a letter or underscore) with the explicit named-group diagnostic.
  * Tracks character-class context and escape state.
  */
 function scanAndRewrite(body: string): { body: string; problem: string | null } {
@@ -297,8 +300,44 @@ function scanAndRewrite(body: string): { body: string; problem: string | null } 
       if (rest.startsWith("^")) {
         return { body: "", problem: "PCRE flag reset (?^) is not supported by JS" };
       }
-      if (rest.startsWith("?P") && rest.charAt(2) !== "<" && rest.charAt(2) !== "=") {
-        return { body: "", problem: "malformed PCRE named-group construct (?P…)" };
+      if (rest.startsWith("?P")) {
+        // PCRE named groups (SPEC §5 table): (?P<name> → (?<name>,
+        // (?P=name) → \k<name>. PCRE2: a name must start with a letter or
+        // underscore — reject invalid shapes here with the explicit
+        // diagnostic, instead of the generic JS constructor message.
+        const sep = rest.charAt(2);
+        if ((sep !== "<" && sep !== "=") || !/^[A-Za-z_]/.test(rest.charAt(3))) {
+          return { body: "", problem: "malformed PCRE named-group construct (?P…)" };
+        }
+        if (sep === "=") {
+          // (?P=name) — the name ends at the first ')' (names cannot contain ')').
+          const close = rest.indexOf(")");
+          if (close !== -1) {
+            const name = rest.slice(3, close);
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+              return { body: "", problem: "malformed PCRE named-group construct (?P…)" };
+            }
+            out += `\\k<${name}>`;
+            i += close + 1;
+            continue;
+          }
+          // unterminated (?P=name — fall through (the JS constructor
+          // reports the invalid group, as before).
+        } else {
+          // (?P<name> — the name ends at the first '>' (names cannot contain '>').
+          const close = rest.indexOf(">");
+          if (close !== -1) {
+            const name = rest.slice(3, close);
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+              return { body: "", problem: "malformed PCRE named-group construct (?P…)" };
+            }
+          }
+          // Emit the JS named-group prefix and rescan from the name — the
+          // name characters and the closing '>' pass through as literals.
+          out += "(?<";
+          i += 3;
+          continue;
+        }
       }
       let j = 1;
       while (j < rest.length && FLAG_CONSTRUCT_CHARS.includes(rest.charAt(j))) {

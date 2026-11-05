@@ -152,6 +152,28 @@ describe("pcre — named groups & backreferences (SPEC §5 table)", () => {
   it("rejects (?Pabc) with the explicit named-group guard (not the JS constructor error)", () => {
     expect(rejected("/(?Pabc)x/")).toContain("named-group");
   });
+
+  it("rejects (?P=<invalid name>) with the explicit named-group guard (homogeneous diagnostic)", () => {
+    // PCRE2: a name must start with a letter or underscore — (?P=123) is a
+    // compile error ("subpattern name must start with a non-digit"), not a
+    // valid backreference. The diagnostic must be the named-group one, not
+    // the generic JS constructor message ("Invalid group").
+    expect(rejected("/(?P=123)x/")).toContain("named-group");
+  });
+
+  it("rejects (?P<1abc>…) with the explicit named-group guard (homogeneous diagnostic)", () => {
+    // Same class of hole on the group-definition form.
+    expect(rejected("/(?P<1abc>x/")).toContain("named-group");
+  });
+
+  it("keeps (?P< literal inside a character class (no rewrite — PCRE fidelity)", () => {
+    // [(?P<] is a class of the literal characters ( ? P < — valid PCRE2.
+    // It must still match "P" after translation (the old global rewrite
+    // turned it into [(?<], silently dropping the P).
+    const re = ok("/[(?P<]/");
+    expect(re.test("P")).toBe(true);
+    expect(re.test("x")).toBe(false);
+  });
 });
 
 describe("pcre — inline flags (SPEC §5 table: single leading occurrence only)", () => {
