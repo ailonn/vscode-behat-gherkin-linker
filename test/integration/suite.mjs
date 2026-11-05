@@ -17,11 +17,16 @@
  *   · undefined step: commandes.feature line 12 (1-based)
  *   · orphan definition: CommandeSteps.php line 31 (1-based)
  *   · 0 duplicates.
+ *
+ * The setting-gate scenarios (orphans / enabled) run last: they mutate the
+ * workspace configuration and restore it, so the reference assertions above
+ * always see the default settings. The SPEC §7 restart scenario lives in
+ * suite-restart.mjs (a second, fresh VSCode launch — see runner.mjs).
  */
 import * as vscode from "vscode";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { access, unlink, writeFile } from "node:fs/promises";
+import { mkdirSync, readFileSync } from "node:fs";
+import { access, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 // --- mini test framework (dependency-free, registry + run Promise) -------
@@ -193,6 +198,54 @@ test("AC-2: PHP definition → all matching feature steps (reverse)", async () =
       (l) => l.uri.fsPath.endsWith("commandes.feature") && l.range.start.line === 5
     );
   });
+});
+
+// --- AC-1/AC-2 completeness: the contract promises the FULL set --------------
+
+test("AC-1/AC-2: completeness — the exact location set (no more, no less)", async () => {
+  await waitForActivation();
+  const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  // AC-1: the step at line 6 (1-based) resolves to EXACTLY one definition —
+  // CommandeSteps.php line 15 (1-based) = 14 (0-based). The @Then of the
+  // same method does not match ("est valide" ≠ "avec succès") and the
+  // English/German definitions carry other patterns.
+  const defs = toLocations(
+    await vscode.commands.executeCommand(
+      "vscode.executeDefinitionProvider",
+      commandes.uri,
+      new vscode.Position(5, 10)
+    )
+  );
+  assert.equal(defs.length, 1, "AC-1: exactly one matching definition");
+  assert.ok(
+    defs[0].uri.fsPath.endsWith("CommandeSteps.php") &&
+      defs[0].range.start.line === 14,
+    `AC-1: the location is CommandeSteps.php line 14 (0-based): ${JSON.stringify(defs)}`
+  );
+  // AC-2: the @When definition (line 15 (1-based) = 14 (0-based)) resolves to
+  // EXACTLY two steps — commandes.feature line 6 (5, 0-based) and
+  // paiements.feature line 5 (4, 0-based).
+  const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
+  const refs = toLocations(
+    await vscode.commands.executeCommand(
+      "vscode.executeReferenceProvider",
+      php.uri,
+      new vscode.Position(14, 10)
+    )
+  )
+    .map((l) => ({
+      path: l.uri.fsPath.split(/[\\/]/).pop(),
+      line: l.range.start.line,
+    }))
+    .sort((a, b) => (a.path + a.line).localeCompare(b.path + b.line));
+  assert.deepEqual(
+    refs,
+    [
+      { path: "commandes.feature", line: 5 },
+      { path: "paiements.feature", line: 4 },
+    ],
+    "AC-2: exactly the two matching steps, no more, no less"
+  );
 });
 
 // --- AC-3: diagnostics (SPEC §3) --------------------------------------------
@@ -372,6 +425,50 @@ test("AC-4: hover on an untranslatable definition → the reason (fail loud)", a
   });
 });
 
+test("AC-4: hover on a @Transform docblock line → the definition card", async () => {
+  await waitForActivation();
+  const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
+  // The @Transform line — line 24 (1-based) = 23 (0-based) — NOT the
+  // annotation line itself: the docblock resolution must find the @When of
+  // the enclosing block and carry the @Transform in the card.
+  const pos = new vscode.Position(23, 10);
+  let text = "";
+  await waitFor("AC-4: the @Transform hover carries the definition card", async () => {
+    const hovers = await vscode.commands.executeCommand(
+      "vscode.executeHoverProvider",
+      php.uri,
+      pos
+    );
+    text = hoverText(hovers);
+    return text.includes("App\\Behat\\Transforms\\CommandeNumero");
+  });
+  assert.ok(text.includes("je paie la commande"), "the step expression in the card");
+  assert.ok(text.includes("jePaie"), "the method name in the card");
+  assert.ok(text.includes("Usages"), "the usages section");
+});
+
+test("AC-4: hover on an ambiguous step → both matches + the AmbiguousMatchException flag", async () => {
+  await waitForActivation();
+  const doc = await vscode.workspace.openTextDocument(docUri("e2e/doublons.feature"));
+  // The step at line 5 (1-based) = 4 (0-based): two definitions share the
+  // pattern — the Behat runtime throws the AmbiguousMatchException on it.
+  const pos = new vscode.Position(4, 10);
+  let text = "";
+  await waitFor("AC-4: the ambiguity flag is shown", async () => {
+    const hovers = await vscode.commands.executeCommand(
+      "vscode.executeHoverProvider",
+      doc.uri,
+      pos
+    );
+    // The round trip serializes the markdown (`*` → `\*`, spaces → `&nbsp;`)
+    // — normalize back to the raw value (code blocks pass through untouched).
+    text = hoverText(hovers).replace(/&nbsp;/g, " ").replace(/\\\*/g, "*");
+    return text.includes("Ambiguous: 2 definitions match");
+  });
+  assert.ok(text.includes("premiere"), "the first matching definition");
+  assert.ok(text.includes("seconde"), "the second matching definition");
+});
+
 // --- AC-5: static rebuild (watcher → debounce → re-index) --------------------
 
 test("AC-5: rebuild — a new feature file is indexed by the watcher", async () => {
@@ -396,6 +493,140 @@ test("AC-5: rebuild — a new feature file is indexed by the watcher", async () 
   } finally {
     await unlink(file).catch(() => {});
   }
+});
+
+// --- AC-3: vendor/ exclusion, positive proof ---------------------------------
+
+test("AC-3: vendor/ exclusion — a vendored feature is never indexed", async () => {
+  await waitForActivation();
+  const root = workspaceRoot().fsPath;
+  const vendorDir = join(root, "vendor");
+  const vendorUri = vscode.Uri.file(join(vendorDir, "ignored.feature"));
+  const scratch = join(root, "vendor_probe_scratch.feature");
+  mkdirSync(vendorDir, { recursive: true });
+  try {
+    await writeFile(
+      vendorUri.fsPath,
+      "Feature: Vendored\n\n  Scenario: Probe\n    Given a step that exists nowhere\n",
+      "utf8"
+    );
+    // A root-level scratch step forces the rebuild that runs while the
+    // vendored file is on disk: its diagnostic is the proof the index
+    // pipeline ran — the same publish would show the vendored diagnostic if
+    // the exclusion failed.
+    await writeFile(
+      scratch,
+      "Feature: Probe\n\n  Scenario: Scratch\n    Given a step that exists nowhere\n",
+      "utf8"
+    );
+    const scratchDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(scratch));
+    await waitFor(
+      "vendor probe: rebuild ran (scratch step diagnosed)",
+      async () =>
+        vscode.languages
+          .getDiagnostics(scratchDoc.uri)
+          .some((d) => d.severity === ERROR),
+      30000 // watcher + debounce + rebuild budget
+    );
+    assert.equal(
+      vscode.languages.getDiagnostics(vendorUri).length,
+      0,
+      "no diagnostic on the vendored feature — vendor/ is always excluded"
+    );
+    const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+      "the reference file is still diagnosed (positive control)"
+    );
+  } finally {
+    await rm(scratch, { force: true });
+    await rm(vendorDir, { recursive: true, force: true });
+  }
+});
+
+// --- setting gates (run last: they mutate the workspace configuration) --------
+
+test("AC-3: gherkinBehat.orphans=false → the orphan info is off (errors intact) → on", async () => {
+  await waitForActivation();
+  const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
+  const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  const config = vscode.workspace.getConfiguration("gherkinBehat");
+  try {
+    await config.update("orphans", false, vscode.ConfigurationTarget.Workspace);
+    await waitFor(
+      "orphans off: the orphan info is gone while the error stays",
+      async () => {
+        const infos = vscode.languages.getDiagnostics(php.uri);
+        const errors = vscode.languages.getDiagnostics(commandes.uri);
+        return (
+          !infos.some((d) => d.severity === INFO && /orphan/i.test(d.message)) &&
+          errors.some((d) => d.severity === ERROR)
+        );
+      },
+      30000
+    );
+  } finally {
+    await config.update("orphans", true, vscode.ConfigurationTarget.Workspace);
+  }
+  await waitFor(
+    "orphans on: the orphan info is back",
+    async () =>
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .some((d) => d.severity === INFO && /orphan/i.test(d.message))
+  );
+});
+
+test("AC-3: gherkinBehat.enabled=false → off switch (diagnostics cleared, providers empty) → on", async () => {
+  await waitForActivation();
+  const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
+  const config = vscode.workspace.getConfiguration("gherkinBehat");
+  try {
+    await config.update("enabled", false, vscode.ConfigurationTarget.Workspace);
+    await waitFor(
+      "enabled off: all diagnostics cleared",
+      async () =>
+        vscode.languages.getDiagnostics(commandes.uri).length === 0 &&
+        vscode.languages.getDiagnostics(php.uri).length === 0,
+      30000
+    );
+    // No index → the providers resolve to nothing (no file read, no match).
+    assert.equal(
+      toLocations(
+        await vscode.commands.executeCommand(
+          "vscode.executeDefinitionProvider",
+          commandes.uri,
+          new vscode.Position(5, 10)
+        )
+      ).length,
+      0,
+      "definition provider empty while off"
+    );
+    assert.equal(
+      toLocations(
+        await vscode.commands.executeCommand(
+          "vscode.executeReferenceProvider",
+          php.uri,
+          new vscode.Position(14, 10)
+        )
+      ).length,
+      0,
+      "reference provider empty while off"
+    );
+  } finally {
+    await config.update("enabled", true, vscode.ConfigurationTarget.Workspace);
+  }
+  await waitFor(
+    "enabled on: the reference diagnostics are back",
+    async () =>
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+    30000
+  );
 });
 
 // --- entry point (called by the extension host) ------------------------------
