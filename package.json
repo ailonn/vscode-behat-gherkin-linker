@@ -4,11 +4,12 @@
   "description": "Bidirectional navigation between Gherkin .feature steps and Behat PHP step definitions — static analysis, zero PHP, exact Behat matching semantics",
   "version": "0.1.0",
   "publisher": "ailonn",
+  "packageManager": "pnpm@10.33.2",
   "license": "MIT",
   "type": "module",
   "engines": {
     "vscode": "^1.90.0",
-    "node": ">=20"
+    "node": ">=20 <23"
   },
   "categories": [
     "Other"
@@ -61,7 +62,7 @@
     "typecheck:all": "tsc -p tsconfig.test.json",
     "test": "vitest run test/unit",
     "test:watch": "vitest test/unit",
-    "test:integration": "npm run build && node test/integration/runner.mjs"
+    "test:integration": "pnpm run build && node test/integration/runner.mjs"
   },
   "dependencies": {
     "@cucumber/gherkin": "42.0.1",
