@@ -6,6 +6,13 @@
   "publisher": "ailonn",
   "packageManager": "pnpm@10.33.2",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ailonn/vscode-behat-gherkin-linker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ailonn/vscode-behat-gherkin-linker/issues"
+  },
   "type": "module",
   "engines": {
     "vscode": "^1.90.0",
@@ -57,6 +64,7 @@
       }
     }
   },
+  "vscode:prepublish": "pnpm run build",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck:all": "tsc -p tsconfig.test.json",
@@ -70,8 +78,9 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "@types/vscode": "^1.145.0",
+    "@types/vscode": "^1.90.0",
     "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "4.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }

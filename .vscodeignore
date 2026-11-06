@@ -1,0 +1,13 @@
+# Development and QA assets — never shipped in the VSIX
+.github/
+.vscode-test/
+test/
+features/
+qa/
+SPEC.md
+tsconfig.test.json
+vitest.config.ts
+.nvmrc
+.npmrc
+pnpm-lock.yaml
+.gitignore
