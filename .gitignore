@@ -4,3 +4,4 @@ dist/
 *.vsix
 .vscode-test/
 test/integration/workspace/
+test/stress/generated/
