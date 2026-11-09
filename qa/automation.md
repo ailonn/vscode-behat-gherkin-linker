@@ -8,7 +8,7 @@ automated, what stays manual, what the next cycle absorbs.
 | Control | Job | Trigger |
 |---|---|---|
 | unit: core + shell + packaging lock + stress generator CA + mapping guard (195 tests) | `check` | push/PR |
-| e2e 21 + restart 2 (test-electron on xvfb) | `check` | push/PR |
+| e2e 22 + restart 2 (test-electron on xvfb — incl. the CRASH-003 read-failure lock) | `check` | push/PR |
 | stress smoke 100×100 (bounded by the locked 55 s budget) | `check` | push/PR |
 | vsix content (no test/features/qa/SPEC in the vsix) | `check` | push/PR |
 | stress full 1000×1000 (wall-time budget 55 s) + vsix pack (artifact) | `release` | tag `v*` |
