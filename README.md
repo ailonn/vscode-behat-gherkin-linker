@@ -17,7 +17,7 @@ This extension makes the link **navigable in both directions** and highlights th
 - **Feature → definition** (F12 / `Cmd/Ctrl+Click`): a step resolves to its PHP definition — regex expressions with named groups, or `:param` expressions — with **type-agnostic matching**, exactly as the Behat runtime matches.
 - **Definition → usages** (`Shift+F12` / *Find All References*): a PHP step definition resolves to every matching feature step, across all feature files. A method carrying N annotations yields N definitions.
 - **Hover, both directions**: step → class (FQCN) / method / expression / named groups ↔ method parameters (plus `@Transform` resolution); definition → its usages; an untranslatable expression → the reason (fail loud).
-- **Five diagnostics** — see [Diagnostics](#diagnostics).
+- **Six diagnostics** — see [Diagnostics](#diagnostics).
 - **All official Gherkin dialects** — French, English, German, and the rest via `# language:` (keywords come from the official [`@cucumber/gherkin`](https://www.npmjs.com/package/@cucumber/gherkin) parser — nothing hardcoded). A feature **without** a `# language:` header is parsed in English (the parser's official default).
 - **Static, zero CLI** — indexing and navigation work in a workspace with no PHP and no `vendor/`.
 
@@ -30,6 +30,7 @@ This extension makes the link **navigable in both directions** and highlights th
 | Duplicate definition | warning | PHP, lines of the group | strictly identical pattern, N ≥ 2 definitions |
 | Untranslatable expression | info | PHP, line of the annotation | the PCRE expression cannot be translated to JavaScript — the reason is in the message (fail loud: the step is never falsely matched) |
 | Unparseable Gherkin | error | feature (line when the parser provides one) | the parser could not parse the file |
+| Unreadable file | error | the file, top line | the file could not be read (permissions, NFS failure, …) — the file is skipped, the rest of the workspace stays indexed and diagnosed (partial index) |
 
 The matching semantics are verified against the Behat 3.x source (`RepositorySearchEngine::match()`) as of 2026-11-04.
 
@@ -67,6 +68,8 @@ v0.1.0 is distributed as a VSIX on GitHub Releases (no marketplace publication i
 - **Single workspace root.** Only the first root of a multi-root workspace is indexed.
 - **No Cucumber Expressions.** Behat does not support them (no code in Behat 3.x/4.x — open request [Behat/Behat#1254](https://github.com/Behat/Behat/issues/1254)).
 - **Untranslatable PCRE constructs** (`\K`, `\A`, `\z`, possessive quantifiers, …) are never silently mis-matched: the definition is indexed with an info diagnostic carrying the reason (fail loud).
+- **Catastrophic backtracking can freeze the extension host.** A nested-quantifier pattern (e.g. `/^(\w+)+$/`) makes a single unmatched step take exponential backtracking time (measured 2026-11-09, CRASH-002: a 76 s host-wide freeze for a 41-character step; 942 s isolated at 38 characters, ~2× per character). Behat's own `preg_match` backtracks the same way, but PHP's PCRE is bounded by `pcre.backtrack_limit`; the extension's static matching is not bounded yet — bounded matching is a planned later version.
+- **A `*/` inside a docblock pattern is not indexed.** PHP closes a block comment at the *first* `*/`, so a pattern like `@Given /abc*/` makes the file invalid PHP (Behat fatals on it); the scanner, faithfully, ends the docblock at `*/` and indexes no definition from that block.
 
 ## Specified in Gherkin
 

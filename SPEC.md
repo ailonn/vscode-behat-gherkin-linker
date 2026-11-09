@@ -92,12 +92,14 @@ src/
     matcher.ts     # Behat semantics: type-agnostic, unanchored regex, anchored :param, named groups
     index.ts       # pure build: (StepRef[], DefinitionRef[]) → Index; rebuild
   extension/       # imperative shell — the only code importing `vscode`
-    activation.ts  # watchers (debounce, coalesced, last-wins token), index (re)build,
-                   #   diagnostics publication (incl. unparseable Gherkin)
+    activation.ts  # watchers (debounce, coalesced, last-wins token), index (re)build
+                   #   (per-file read failures → diagnostic + partial index, CRASH-003),
+                   #   diagnostics publication
     definition.ts  # DefinitionProvider (feature → php)
     references.ts  # ReferenceProvider (php → features)
     hover.ts       # HoverProvider (both directions)
-    diagnostics.ts # undefined (error) / orphan (info) / duplicate (warning)
+    diagnostics.ts # undefined (error) / orphan (info) / duplicate (warning) /
+                   # untranslatable (info) / unparseable (error) / unreadable (error)
   settings.ts      # gherkinBehat.enabled / .features / .steps / .orphans
 test/
   unit/            # vitest — core only, fixtures in test/fixtures/
@@ -195,9 +197,10 @@ Scorecard: one page per cycle (see the skill). **KPI**: decreasing manual time p
   Fixtures: `test/fixtures/` — a generic PHP/Behat FR project (no personal data),
   reference size N/M/K for the wall-time assertion.
 - **Integration** — `@vscode/test-electron`: definition/references/hover providers,
-  diagnostics (including **unparseable Gherkin → diagnostic, no crash**), and
-  **`reloadWindow` resilience** (index rebuild after restart — the chat-noir case
-  promoted to CI).
+  diagnostics (including **unparseable Gherkin → diagnostic, no crash**, and
+  **unreadable file → read-failure diagnostic + partial index, no crash** —
+  CRASH-003), and **`reloadWindow` resilience** (index rebuild after restart —
+  the chat-noir case promoted to CI).
 - **CI** — GitHub Actions (push/PR): Node 22, `npm ci`, unit, integration, `vsce pack`.
 
 ## 8. Release
