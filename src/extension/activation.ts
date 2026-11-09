@@ -111,14 +111,21 @@ export class IndexService {
           if (isFeature) {
             const parsed = await parseFeature(source, relPath);
             if (parsed.ok) {
-              steps.push(...parsed.steps);
+              // A single feature can carry 1M+ steps (the stress scale):
+              // `push(...steps)` would blow the call stack (V8 argument
+              // limit ≈ 65k) — collect one by one.
+              for (const step of parsed.steps) {
+                steps.push(step);
+              }
             } else {
               // ok:false (unparseable Gherkin) becomes a diagnostic —
               // never a crash.
               failures.push({ path: relPath, error: parsed.error });
             }
           } else {
-            definitions.push(...scanPhp(source, relPath));
+            for (const definition of scanPhp(source, relPath)) {
+              definitions.push(definition);
+            }
           }
         }
       }
