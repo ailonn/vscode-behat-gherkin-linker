@@ -16,6 +16,7 @@ import type { DefinitionRef, Index, StepRef } from "../core/types.js";
 import { ALWAYS_EXCLUDED, readSettings } from "../settings.js";
 import {
   type ParseFailure,
+  type ReadFailure,
   clearDiagnostics,
   publishDiagnostics,
 } from "./diagnostics.js";
@@ -83,6 +84,7 @@ export class IndexService {
     const steps: StepRef[] = [];
     const definitions: DefinitionRef[] = [];
     const failures: ParseFailure[] = [];
+    const readFailures: ReadFailure[] = [];
     const lineLengths = new Map<string, readonly number[]>();
     const seen = new Set<string>();
 
@@ -101,8 +103,25 @@ export class IndexService {
           if (relPath === undefined) {
             continue;
           }
-          const buffer = await vscode.workspace.fs.readFile(file);
-          const source = new TextDecoder("utf-8").decode(buffer);
+          let source: string;
+          try {
+            source = new TextDecoder("utf-8").decode(
+              await vscode.workspace.fs.readFile(file)
+            );
+          } catch (err) {
+            // An unreadable file (EACCES, NFS failure, …) must not reject
+            // the whole rebuild (CRASH-003: the rejected Promise silently
+            // lost the entire index and every diagnostic) — diagnose the
+            // file, index the rest (partial index).
+            readFailures.push({
+              path: relPath,
+              reason:
+                err instanceof Error && err.message !== ""
+                  ? err.message
+                  : String(err),
+            });
+            continue;
+          }
           // Full-line diagnostic ranges: the source is already read.
           lineLengths.set(
             relPath,
@@ -145,6 +164,7 @@ export class IndexService {
       this.index,
       settings.orphans,
       this.failures,
+      readFailures,
       root,
       lineLengths
     );
