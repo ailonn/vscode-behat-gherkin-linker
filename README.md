@@ -69,7 +69,7 @@ v0.1.0 is distributed as a VSIX on GitHub Releases (no marketplace publication i
 - **No Cucumber Expressions.** Behat does not support them (no code in Behat 3.x/4.x — open request [Behat/Behat#1254](https://github.com/Behat/Behat/issues/1254)).
 - **Untranslatable PCRE constructs** (`\K`, `\A`, `\z`, possessive quantifiers, …) are never silently mis-matched: the definition is indexed with an info diagnostic carrying the reason (fail loud).
 - **Catastrophic backtracking can freeze the extension host.** A nested-quantifier pattern (e.g. `/^(\w+)+$/`) makes a single unmatched step take exponential backtracking time (measured 2026-11-09, CRASH-002: a 76 s host-wide freeze for a 41-character step; 942 s isolated at 38 characters, ~2× per character). Behat's own `preg_match` backtracks the same way, but PHP's PCRE is bounded by `pcre.backtrack_limit`; the extension's static matching is not bounded yet — bounded matching is a planned later version.
-- **A `*/` inside a docblock pattern is not indexed.** PHP closes a block comment at the *first* `*/`, so a pattern like `@Given /abc*/` makes the file invalid PHP (Behat fatals on it); the scanner, faithfully, ends the docblock at `*/` and indexes no definition from that block.
+- **A `*/` inside a docblock pattern is not indexed.** PHP closes a block comment at the *first* `*/`, so a pattern like `@Given /abc*/` makes the file invalid PHP (Behat fatals on it); the scanner, faithfully, ends the docblock at `*/` and indexes no definition from that block. Same for a docblock that is never closed: the scanner indexes nothing from it, and PHP fatals on such a file.
 
 ## Specified in Gherkin
 
