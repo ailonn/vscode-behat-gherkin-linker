@@ -100,8 +100,12 @@ function variantOneLine0based(root) {
   return idx;
 }
 
-/** The probe wait must exceed the worst case (the locked budget + slack). */
-const PROBE_WAIT_MS = Math.max(BUDGET_MS, 0) + 120000;
+/**
+ * The probe wait must exceed the worst case: locked budget + slack once
+ * locked; a generous 15 min cap while unlocked (the measurement run — the
+ * first full-scale index can take minutes).
+ */
+const PROBE_WAIT_MS = BUDGET_MS > 0 ? BUDGET_MS + 120000 : 900000;
 
 test("CA-4: The full-scale workspace is indexed without crash and the probe resolves to exactly one definition", async () => {
   await waitForActivation();
@@ -145,13 +149,15 @@ test("CA-4: The full-scale workspace is indexed without crash and the probe reso
 });
 
 test("CA-5: The first probe resolution stays within the locked wall-time budget", async () => {
+  assert.ok(FIRST_PROBE_MS > 0, "the probe resolved once (CA-4 ran first)");
+  const elapsedMs = FIRST_PROBE_MS - RUN_START_MS;
+  // The measured value is always reported — it is the baseline input of the
+  // F3 lock (budget = ceil(baseline × 3, 5 s)) and the CI regression signal.
+  console.log(`stress: first probe resolution at ${elapsedMs} ms (run start → probe, inside the extension host)`);
   assert.ok(
     BUDGET_MS > 0,
     "the budget is locked in stress-spec.md §3 `budget` (F3: measured baseline × 3, rounded up to 5 s)"
   );
-  assert.ok(FIRST_PROBE_MS > 0, "the probe resolved once (CA-4 ran first)");
-  const elapsedMs = FIRST_PROBE_MS - RUN_START_MS;
-  console.log(`stress: first probe resolution at ${elapsedMs} ms (run start → probe, inside the extension host)`);
   assert.ok(
     elapsedMs <= BUDGET_MS,
     `first probe resolution ${elapsedMs} ms exceeds the locked budget ${BUDGET_MS} ms (performance regression — BLOQUANT)`

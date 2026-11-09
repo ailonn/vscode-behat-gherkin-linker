@@ -70,7 +70,8 @@
     "typecheck:all": "tsc -p tsconfig.test.json",
     "test": "vitest run test/unit test/stress",
     "test:watch": "vitest test/unit",
-    "test:integration": "pnpm run build && node test/integration/runner.mjs"
+    "test:integration": "pnpm run build && node test/integration/runner.mjs",
+    "test:stress": "pnpm run build && node test/stress/stress-runner.mjs"
   },
   "dependencies": {
     "@cucumber/gherkin": "42.0.1",
