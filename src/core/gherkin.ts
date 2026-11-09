@@ -115,7 +115,12 @@ function collectChild(steps: StepRef[], child: ScenarioContainer, path: string):
     }
   }
   if (child.scenario) {
-    steps.push(...scenarioSteps(child.scenario, path));
+    // A scenario can carry 100k+ StepRefs (a Scenario Outline with one
+    // step per Examples row): `push(...refs)` would blow the call stack
+    // (V8 argument limit) — collect one by one.
+    for (const ref of scenarioSteps(child.scenario, path)) {
+      steps.push(ref);
+    }
   }
   if (child.rule) {
     for (const ruleChild of child.rule.children) {
