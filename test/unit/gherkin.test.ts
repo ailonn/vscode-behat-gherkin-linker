@@ -270,3 +270,27 @@ describe("Background — every Background step is a StepRef (declared design, lo
     ]);
   });
 });
+
+describe("R7 — scale: one scenario beyond the V8 argument limit (stress finding 2026-11-09)", () => {
+  it("a single scenario with 200k steps parses to 200k StepRefs (no argument spread)", async () => {
+    // The full-scale stress run found the collection path blowing the call
+    // stack (`push(...steps)` — V8 argument limit) on a 1M-step feature.
+    // This keeps the scenario→feature collection above the limit boundary
+    // (65k–125k) in the fast loop: 200k steps in ONE scenario, parsed to
+    // exactly 200k StepRefs.
+    const n = 200_000;
+    const source = [
+      "Feature: Scale",
+      "",
+      "  Scenario: one huge scenario",
+      ...Array.from({ length: n }, (_, i) => `    Given step ${i + 1}`),
+    ].join("\n");
+    const result = await parseFeature(source, "scale.feature");
+    expect(result.ok, "the huge scenario parses (no RangeError)").toBe(true);
+    if (!result.ok) return;
+    expect(result.steps.length, "every step is a StepRef").toBe(n);
+    expect(result.steps[n - 1].line, "1-based lines through the whole scenario").toBe(
+      n + 3
+    );
+  });
+});
