@@ -80,6 +80,7 @@ nvm use            # 22.14.0 (.nvmrc)
 pnpm install
 pnpm test          # unit suite (functional core)
 pnpm test:integration   # e2e in a real VS Code instance (downloads VS Code on first run)
+pnpm test:stress        # stress e2e 1000x1000 in a real VS Code instance (minutes, wall-time budget-gated)
 ```
 
 The toolchain is pinned: `packageManager` (pnpm 10.33.2 — fail loud on mismatch, see `.npmrc`) + `engines.node` (`>=20 <23`, the floor is the Node runtime of VS Code 1.90) + `.nvmrc` (22.14.0, the tested version).
