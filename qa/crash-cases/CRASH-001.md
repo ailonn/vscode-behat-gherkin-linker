@@ -1,6 +1,6 @@
 # CRASH-001 — 1M undefined steps (diagnostics flood)
 
-- **Status**: not run yet (added 2026-11-09, wave 3)
+- **Status**: run 2026-11-09 — **no crash, no freeze** (see Trace)
 - **Source**: `test/stress/stress-spec.md` §3 `diagnostics-flood` — the 1M
   undefined-steps case is a chat-noir crash case, **not** part of the stress
   (the stress asserts the fully-matched workspace; this case inverts it: the
@@ -39,5 +39,70 @@ Workspace shape: `stress.feature` = 1000 scenarios × 1000 steps (~42 MB,
 
 ## Trace
 
-(to be filled by the chat-noir run: minimal input + command + stack when a
-crash occurs + post-restart state + measured wall time)
+Run 2026-11-09 (chat-noir, QA cycle 2026-11-09, step 3). VS Code 1.145.2 test
+instance (`@vscode/test-electron` 3.1.0, 2 sequential launches = first launch +
+faithful fresh restart per SPEC §7). Linux x64, Node 22.14.0 extension host.
+
+### Minimal input
+
+```
+node test/stress/generate-stress.mjs --scenarios 1000 --steps 1000 --seed 42 --out <ws>
+rm <ws>/StressContext.php        # 0 definitions → every step undefined
+```
+
+Workspace: one 43 043 923-byte `stress.feature` (1 001 002 lines, 1 000 000
+steps), no `.php` file.
+
+### Command
+
+```
+node run-crash-001.mjs   # 2× runTests({extensionDevelopmentPath: <repo>, launchArgs: [<ws>,
+                         #   --disable-telemetry, --disable-workspace-trust,
+                         #   --skip-welcome, --skip-release-notes]})
+```
+
+Suite contract: wait activation → poll `getDiagnostics(stress.feature).length`
+until stable (30 s no-change window, 25 min cap) → `vscode.executeDefinitionProvider`
+on the step line "When step 1 of scenario 1 variant 1" (line 3, 0-based) →
+exit → fresh second launch, same workspace, same contract.
+
+### Phase 1 — first launch
+
+| Fact | Value |
+|---|---|
+| Extension activated | +206 ms (since suite load) |
+| Diagnostics jump | 0 → **1 000 000** at **+2 560 ms** (RSS 712 MB at that instant) |
+| Diagnostics count | exactly 1 000 000 (one ERROR per step) — no crash, no truncation |
+| Stability | 30 s no-change window reached; total wait 32 673 ms |
+| Wall time (suite load → stable) | 33 001 ms — incl. 30 s stability window; publish itself ~2.6 s |
+| Peak RSS observed | 773 MB (extension host) |
+| Definition probe on the step line | resolved, **0 locations**, no exception |
+| Definition probe on the `Feature:` line | resolved, 0 locations, no exception |
+| Extension host exit | code 0 (clean) |
+| runTests wall | 39.9 s (incl. ~6 s VS Code startup) |
+
+No 10-min stall (progress within 2.6 s) → no freeze. Note: the publish is far
+cheaper than the matched stress baseline (17.9 s): with 0 definitions the
+O(steps × definitions) matching loop does zero work — the measured cost is
+parse (43 MB) + building 1M `vscode.Diagnostic` objects + one
+`collection.set` per file.
+
+### Phase 2 — fresh launch (post-restart, same workspace)
+
+| Fact | Value |
+|---|---|
+| Extension activated | +105 ms |
+| Diagnostics jump | 0 → **1 000 000** at +2 492 ms |
+| Diagnostics count | exactly 1 000 000 again — state reconstructed, no residue |
+| Wall time (suite load → stable) | 32 709 ms |
+| RSS | 575–782 MB |
+| Definition probe on the step line | resolved, **0 locations**, no exception |
+| Extension host exit | code 0 (clean) |
+| runTests wall | 35.6 s |
+
+### Verdict (facts only)
+
+No crash, no freeze, no corruption: both the first launch and the fresh
+restart publish exactly the 1M ERROR diagnostics and keep the definition
+provider functional (0 locations, no throw). Slow-but-alive — and in fact
+fast (~2.6 s to publish) on this machine.
