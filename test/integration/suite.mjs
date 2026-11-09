@@ -26,7 +26,7 @@
 import * as vscode from "vscode";
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync } from "node:fs";
-import { access, rm, unlink, writeFile } from "node:fs/promises";
+import { access, chmod, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 // --- mini test framework (dependency-free, registry + run Promise) -------
@@ -747,6 +747,78 @@ test("AC-3: gherkinBehat.enabled=false → off switch (diagnostics cleared, prov
       vscode.languages
         .getDiagnostics(commandes.uri)
         .some((d) => d.severity === ERROR),
+    30000
+  );
+});
+
+// --- CRASH-003: unreadable file → per-file diagnostic + partial index --------
+// Run last (like the setting gates): mutates a workspace file's permission and
+// the orphans setting, both restored in `finally`.
+
+test("AC-3: unreadable feature file → error diagnostic + partial index (CRASH-003)", async () => {
+  await waitForActivation();
+  const brokenPath = join(workspaceRoot().fsPath, "e2e", "broken.feature");
+  const brokenUri = docUri("e2e/broken.feature");
+  const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  const config = vscode.workspace.getConfiguration("gherkinBehat");
+  await chmod(brokenPath, 0o000);
+  try {
+    // Trigger the rebuild that runs while the file is unreadable: the
+    // configuration change schedules it (the chmod's own file event may
+    // coalesce into the same rebuild — either way, one build).
+    await config.update("orphans", false, vscode.ConfigurationTarget.Workspace);
+    await waitFor(
+      "CRASH-003: read-failure diagnostic on the unreadable file",
+      async () =>
+        vscode.languages
+          .getDiagnostics(brokenUri)
+          .some((d) => d.severity === ERROR && /cannot read file/i.test(d.message)),
+      30000 // watcher + debounce + rebuild budget
+    );
+    // The file cannot be parsed while unreadable: exactly one diagnostic on
+    // it — the read failure (the old parse-error is replaced, nothing is lost
+    // silently, nothing else is fabricated).
+    const brokenDiag = vscode.languages.getDiagnostics(brokenUri);
+    assert.equal(
+      brokenDiag.length,
+      1,
+      `one diagnostic on the unreadable file: ${JSON.stringify(
+        brokenDiag.map((d) => d.message)
+      )}`
+    );
+    // Partial index: the rest of the workspace is still indexed — the
+    // reference undefined step keeps its diagnostic...
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+      "the reference file is still diagnosed (partial index)"
+    );
+    // ...and navigation still resolves through the partial index.
+    const defs = toLocations(
+      await vscode.commands.executeCommand(
+        "vscode.executeDefinitionProvider",
+        commandes.uri,
+        new vscode.Position(5, 10)
+      )
+    );
+    assert.ok(
+      defs.some(
+        (l) =>
+          l.uri.fsPath.endsWith("CommandeSteps.php") && l.range.start.line === 14
+      ),
+      "navigation still resolves through the partial index"
+    );
+  } finally {
+    await chmod(brokenPath, 0o644).catch(() => {});
+    await config.update("orphans", true, vscode.ConfigurationTarget.Workspace);
+  }
+  await waitFor(
+    "CRASH-003: after restore, the parse-error diagnostic is back",
+    async () =>
+      vscode.languages
+        .getDiagnostics(brokenUri)
+        .some((d) => d.severity === ERROR && /unparseable/i.test(d.message)),
     30000
   );
 });
