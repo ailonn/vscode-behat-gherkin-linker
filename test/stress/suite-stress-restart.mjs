@@ -72,9 +72,9 @@ function probeLine0based(root) {
   return idx;
 }
 
-// The rebuild after a fresh launch costs about as much as the first one —
-// a 10 min cap while the budget is still unlocked (the measurement run sets
-// it from the first build, F3 — the locked value is reconciled afterwards).
+// The rebuild after a fresh launch costs about as much as the first one
+// (baseline ~18 s, measured 2026-11-09) — a generous 10 min cap (CI-runner
+// variance is bounded by the locked 55 s budget in the first suite).
 const PROBE_WAIT_MS = 600000;
 
 test("CA-6: After a fresh launch the index rebuilds and the probe still resolves", async () => {

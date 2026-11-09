@@ -23,11 +23,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The wall-time budget (CA-5) — locked in stress-spec.md §3 `budget` after the
-// first full-scale GREEN run (F3): budget = ceil(baseline × 3, 5 s).
-// -1 = UNLOCKED: the first GREEN run measures the baseline (printed below);
-// a locked budget must be a positive number.
-const BUDGET_MS = -1;
+// The wall-time budget (CA-5) — locked in stress-spec.md §3 `budget` (F3):
+// budget = ceil(baseline × 3, 5 s). Baseline 17905 ms measured 2026-11-09
+// (full-scale first GREEN run) → budget 55 s. A breach is a performance
+// regression (BLOQUANT), never a spec tweak.
+const BUDGET_MS = 55000;
 
 // The stress run start (inside the extension host) — module load.
 const RUN_START_MS = Date.now();
