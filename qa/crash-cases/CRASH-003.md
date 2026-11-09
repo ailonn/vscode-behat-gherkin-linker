@@ -1,7 +1,11 @@
 # CRASH-003 — Unreadable `.feature` file: silent total index loss at window load
 
 - **Status**: run 2026-11-09 — **state loss reproduced** (no crash, no freeze,
-  zero user-visible feedback; self-heals on the next file event — measured)
+  zero user-visible feedback; self-heals on the next file event — measured).
+  **FIXED 2026-11-09** — per-file read try/catch → read-failure ERROR
+  diagnostic + partial index (commit `35946ce`), locked by the e2e suite
+  (`AC-3: unreadable feature file → error diagnostic + partial index
+  (CRASH-003)`).
 - **Source**: chat-noir discovery, QA cycle 2026-11-09, step 3 (fresh-context
   field « IO / filesystem »).
 
@@ -92,3 +96,18 @@ rejection in the extension host log. The state self-heals on the next file
 event (measured — phase 1) and later failed rebuilds keep the last good state
 (measured — phase 3a), but the user has no way to know the index is dead at
 load or frozen afterwards.
+
+## Fix (2026-11-09)
+
+Adjudicated BLOQUANT (violates the standing rule *Feedback & explicitness* —
+a failed intent must be announced with a reason). Fixed TDD:
+
+- **RED** — e2e scenario `AC-3: unreadable feature file → error diagnostic +
+  partial index (CRASH-003)` in `test/integration/suite.mjs` (chmod 000 on
+  `e2e/broken.feature` + settings-gate rebuild trigger, restored in `finally`)
+  — failed with the right reason (no read-failure diagnostic, 21/22).
+- **GREEN** (commit `35946ce`) — per-file `readFile` try/catch in
+  `src/extension/activation.ts` `collect()` + 6th diagnostic `Cannot read
+  file: <reason>` (ERROR, file top line) in `src/extension/diagnostics.ts`.
+  The failed read is diagnosed, the file is skipped, the rest of the
+  workspace is indexed (partial index). 22/22 e2e + 2/2 restart.
