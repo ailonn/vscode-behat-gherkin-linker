@@ -16,7 +16,7 @@ This extension makes the link **navigable in both directions** and highlights th
 
 - **Feature → definition** (F12 / `Cmd/Ctrl+Click`): a step resolves to its PHP definition — regex expressions with named groups, or `:param` expressions — with **type-agnostic matching**, exactly as the Behat runtime matches.
 - **Definition → usages** (`Shift+F12` / *Find All References*): a PHP step definition resolves to every matching feature step, across all feature files. A method carrying N annotations yields N definitions.
-- **Hover, both directions**: step → class (FQCN) / method / expression / named groups ↔ method parameters (plus `@Transform` resolution); definition → its usages; an untranslatable expression → the reason (fail loud).
+- **Hover, both directions**: step → class (FQCN) / method / expression / named groups ↔ method parameters (plus `@Transform` — displayed, not evaluated); definition → its usages; an untranslatable expression → the reason (fail loud).
 - **Six diagnostics** — see [Diagnostics](#diagnostics).
 - **All official Gherkin dialects** — French, English, German, and the rest via `# language:` (keywords come from the official [`@cucumber/gherkin`](https://www.npmjs.com/package/@cucumber/gherkin) parser — nothing hardcoded). A feature **without** a `# language:` header is parsed in English (the parser's official default).
 - **Static, zero CLI** — indexing and navigation work in a workspace with no PHP and no `vendor/`.
@@ -63,6 +63,8 @@ v0.1.0 is distributed as a VSIX on GitHub Releases (no marketplace publication i
 ## What the extension does not resolve, and why
 
 - **Docblock annotations only.** PHP 8 attributes (`#[When]`) are supported by Behat (since 3.9.0, where docblock annotations are deprecated) but are **not indexed in v0** — the scanner is a line-based docblock scan by design (no PHP parser in v0).
+- **Line-based PHP scanner.** A method signature spread over several lines, a step definition living in a **trait or interface**, or a braced `namespace App { }` form is **not indexed** — the steps matching such a definition then show up as *undefined (error)*. Single-line signatures and the one-line `namespace App\X;` form are indexed (SPEC §5).
+- **Rebuild cost on large workspaces.** The index is a full rebuild on every change (SPEC §5): the build runs synchronously in the extension host, so on a very large workspace (1M+ steps) the editor can be less responsive for the duration of the build (measured: ~16–18 s at the 1000×1000 stress scale).
 - **Duplicate detection is an approximation.** The warning fires on **strictly identical patterns** (regardless of annotation type — matching is type-agnostic, so such a group is genuinely ambiguous at the Behat runtime: `AmbiguousMatchException`). Two patterns that are semantically equivalent but textually different are **not** flagged.
 - **Accent divergence with the `i` flag.** JavaScript case folding folds accents (`JÉRÔME` ~ `jérôme`); PCRE without Unicode properties folds ASCII only. Declared divergence (SPEC §5).
 - **Single workspace root.** Only the first root of a multi-root workspace is indexed.
