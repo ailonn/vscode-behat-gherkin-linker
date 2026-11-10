@@ -22,7 +22,7 @@ Fonctionnalité: Packaging et configuration
     Soit le mini-projet fictif restauré (settings par défaut) dont le glob `gherkinBehat.steps` ne couvre plus `CommandeSteps.php`
     Alors les définitions de `CommandeSteps.php` ne sont plus indexées
     Et la step `Quand je valide la commande "CMD-2026"` est undefined (diagnostic error)
-    Soit le même mini-projet dont le setting `gherkinBehat.enabled` est `false`
+    Soit le mini-projet fictif restauré (settings par défaut) dont le setting `gherkinBehat.enabled` est `false`
     Alors aucun fichier n'est lu, aucun diagnostic n'est émis et la navigation ne résout rien (off-switch)
     Soit le setting `gherkinBehat.enabled` restauré à `true`
     Alors les diagnostics de référence sont de nouveau émis

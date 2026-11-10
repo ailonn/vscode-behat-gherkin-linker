@@ -24,8 +24,8 @@ automated, what stays manual, what the next cycle absorbs.
 - **Vsix unpack + tree check** (S6) — the artifact is the release input.
 - **Fresh clone of the public repo** (S8) — once per release (install → full
   suite → pack).
-- **PO signature of the stress budget** (F3) — the number is mechanical
-  (`ceil(baseline × 3, 5 s)`), the signature is a human decision.
+- **PO signature of the stress budget** (F3) — signed 2026-11-10 (gate S9); a
+  new signature is required at any re-baseline of the measured budget.
 
 ## Candidates for the next cycle
 
