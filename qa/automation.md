@@ -7,6 +7,7 @@ automated, what stays manual, what the next cycle absorbs.
 
 | Control | Job | Trigger |
 |---|---|---|
+| build + typecheck (`pnpm run build` + `pnpm run typecheck:all`) | `check` | push/PR |
 | unit: core + shell + packaging lock + stress generator CA + mapping guard (195 tests) | `check` | push/PR |
 | e2e 22 + restart 2 (test-electron on xvfb — incl. the CRASH-003 read-failure lock) | `check` | push/PR |
 | stress smoke 100×100 (bounded by the locked 55 s budget) | `check` | push/PR |

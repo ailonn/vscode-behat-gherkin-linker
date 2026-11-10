@@ -6,7 +6,7 @@ Product: `vscode-behat-gherkin-linker` · pipe: `quality-checker` (5 steps) · v
 
 | Suite | Result | Time |
 |---|---|---|
-| Unit (core + shell guards + packaging lock) | **195/195** | 444 ms |
+| Unit (core + shell guards + packaging lock) | **195/195** | 444 ms on the dev machine — soft metric, not a gate (the count is; wall time is machine-dependent) |
 | E2E (test-electron, real VS Code) | **22/22** (+ restart 2/2) | — |
 | Stress full-scale 1000×1000 | **3/3** — CA-5: 16 174 ms ≤ budget **55 s** (F3 locked, baseline 17.9 s) | — |
 | typecheck:all | 0 | — |
