@@ -43,7 +43,15 @@ jobs:
       - name: Stress smoke (100 x 100 — the locked full-scale budget bounds it)
         run: STRESS_SCENARIOS=100 STRESS_STEPS=100 pnpm test:stress
       - name: Vsix content check (no test/features/qa/SPEC in the vsix)
-        run: pnpm exec vsce ls
+        # A real assertion: `vsce ls` alone can never fail (it is a list).
+        # A `.vscodeignore` regression (e.g. a removed `test/` line) must
+        # fail the build, not ride into the next pack (probe 2026-11-10:
+        # 32 `test/` files listed, exit 0).
+        run: |
+          if pnpm exec vsce ls | grep -qE '^(test|features|qa)/|^SPEC\.md$'; then
+            echo "::error::the vsix would ship test/features/qa/SPEC content — .vscodeignore regression"
+            exit 1
+          fi
 
   release:
     name: release (stress full + vsix pack)
