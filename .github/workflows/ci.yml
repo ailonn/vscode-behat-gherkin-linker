@@ -1,7 +1,8 @@
 # CI — public repo (free-plan runners, unlimited for public repos).
 #
 # push/PR: full gate minus the heavy stress — unit (+ stress generator CA),
-# e2e (test-electron on xvfb), stress SMOKE 100x100, vsix content check.
+# e2e (test-electron on xvfb), stress SMOKE 100x100 (also on xvfb —
+# test-electron needs an X server), vsix content check.
 # tag v*: everything above + stress FULL 1000x1000 + vsce pack (artifact).
 #
 # Toolchain: pnpm/action-setup@v4 reads `packageManager` (pnpm@10.33.2);
@@ -41,7 +42,7 @@ jobs:
       - name: E2E (test-electron, xvfb preinstalled on ubuntu-latest)
         run: xvfb-run -a pnpm test:integration
       - name: Stress smoke (100 x 100 — the locked full-scale budget bounds it)
-        run: STRESS_SCENARIOS=100 STRESS_STEPS=100 pnpm test:stress
+        run: STRESS_SCENARIOS=100 STRESS_STEPS=100 xvfb-run -a pnpm test:stress
       - name: Vsix content check (no test/features/qa/SPEC in the vsix)
         # A real assertion: `vsce ls` alone can never fail (it is a list).
         # A `.vscodeignore` regression (e.g. a removed `test/` line) must
@@ -71,7 +72,7 @@ jobs:
       - name: Build
         run: pnpm run build
       - name: Stress full (1000 x 1000 — the wall-time budget gate)
-        run: pnpm test:stress
+        run: xvfb-run -a pnpm test:stress
       - name: Pack the vsix (pack = validation in vsce 4.x)
         run: pnpm exec vsce pack
       - name: Upload the vsix

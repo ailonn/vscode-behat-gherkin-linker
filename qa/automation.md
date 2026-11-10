@@ -10,9 +10,9 @@ automated, what stays manual, what the next cycle absorbs.
 | build + typecheck (`pnpm run build` + `pnpm run typecheck:all`) | `check` | push/PR |
 | unit: core + shell + packaging lock + stress generator CA + mapping guard (195 tests) | `check` | push/PR |
 | e2e 22 + restart 2 (test-electron on xvfb — incl. the CRASH-003 read-failure lock) | `check` | push/PR |
-| stress smoke 100×100 (bounded by the locked 55 s budget) | `check` | push/PR |
+| stress smoke 100×100 (on xvfb — test-electron needs an X server; bounded by the locked 55 s budget) | `check` | push/PR |
 | vsix content (no test/features/qa/SPEC in the vsix) | `check` | push/PR |
-| stress full 1000×1000 (wall-time budget 55 s) + vsix pack (artifact) | `release` | tag `v*` |
+| stress full 1000×1000 (on xvfb — wall-time budget 55 s) + vsix pack (artifact) | `release` | tag `v*` |
 | toolchain pinning (pnpm 10.33.2 strict, node 22.14.0 via `.nvmrc`) | both | push/PR + tag |
 
 ## Manual (every cycle)
