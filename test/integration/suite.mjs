@@ -617,9 +617,9 @@ test("AC-5: rebuild — a new feature file is indexed by the watcher", async () 
   }
 });
 
-// --- AC-3: vendor/ exclusion, positive proof ---------------------------------
+// --- AC-5: vendor/ exclusion, positive proof ---------------------------------
 
-test("AC-3: vendor/ exclusion — a vendored feature is never indexed", async () => {
+test("AC-5: vendor/ exclusion — a vendored feature is never indexed", async () => {
   await waitForActivation();
   const root = workspaceRoot().fsPath;
   const vendorDir = join(root, "vendor");
@@ -668,9 +668,49 @@ test("AC-3: vendor/ exclusion — a vendored feature is never indexed", async ()
   }
 });
 
+// --- AC-6: dialects (SPEC §3) — DE header + EN official default --------------
+
+test("AC-6: dialects — DE (with header) and EN default (no header) steps resolve", async () => {
+  await waitForActivation();
+  // DE: the `# language: de` header — the step at line 5 (1-based) = 4 (0-based)
+  // resolves to the @Given definition (BestellungSteps.php line 8 (1-based) =
+  // 7 (0-based)). Double quotes are preserved in the indexed step text: the
+  // pattern only matches a quoted login.
+  const de = await vscode.workspace.openTextDocument(docUri("bestellungen_de.feature"));
+  const deDefs = toLocations(
+    await vscode.commands.executeCommand(
+      "vscode.executeDefinitionProvider",
+      de.uri,
+      new vscode.Position(4, 8)
+    )
+  );
+  assert.equal(deDefs.length, 1, "the DE step resolves to exactly one definition");
+  assert.ok(
+    deDefs[0].uri.fsPath.endsWith("BestellungSteps.php") &&
+      deDefs[0].range.start.line === 7,
+    `DE step → BestellungSteps.php line 7 (0-based): ${JSON.stringify(deDefs)}`
+  );
+  // EN default: no `# language:` header — parsed in English (the parser's
+  // official default). The step at line 4 (1-based) = 3 (0-based) resolves to
+  // the @Given definition (OrderSteps.php line 15 (1-based) = 14 (0-based)).
+  const en = await vscode.workspace.openTextDocument(docUri("orders_default_en.feature"));
+  const enDefs = toLocations(
+    await vscode.commands.executeCommand(
+      "vscode.executeDefinitionProvider",
+      en.uri,
+      new vscode.Position(3, 8)
+    )
+  );
+  assert.equal(enDefs.length, 1, "the headerless EN step resolves to exactly one definition");
+  assert.ok(
+    enDefs[0].uri.fsPath.endsWith("OrderSteps.php") && enDefs[0].range.start.line === 14,
+    `EN-default step → OrderSteps.php line 14 (0-based): ${JSON.stringify(enDefs)}`
+  );
+});
+
 // --- setting gates (run last: they mutate the workspace configuration) --------
 
-test("AC-3: gherkinBehat.orphans=false → the orphan info is off (errors intact) → on", async () => {
+test("AC-8: gherkinBehat.orphans=false → the orphan info is off (errors intact) → on", async () => {
   await waitForActivation();
   const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
   const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
@@ -701,7 +741,7 @@ test("AC-3: gherkinBehat.orphans=false → the orphan info is off (errors intact
   );
 });
 
-test("AC-3: gherkinBehat.enabled=false → off switch (diagnostics cleared, providers empty) → on", async () => {
+test("AC-8: gherkinBehat.enabled=false → off switch (diagnostics cleared, providers empty) → on", async () => {
   await waitForActivation();
   const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
   const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
