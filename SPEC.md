@@ -103,6 +103,8 @@ src/
   settings.ts      # gherkinBehat.enabled / .features / .steps / .orphans
 test/
   unit/            # vitest — core only, fixtures in test/fixtures/
+  guards/          # vitest — contract guards: AC mapping (SPEC §3 ↔ features/ ↔ e2e
+                   #   titles, manifest) + docstring⊆fixture (contract lock on fixtures)
   integration/     # @vscode/test-electron — providers + diagnostics + reloadWindow
 features/          # acceptance spec — Gherkin FR (official dialect)
 qa/
