@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-3 : undefined (error) · orpheline (info) · doublon (warning — pattern
 # strictement identique, sémantique `AmbiguousMatchException` de Behat — `RedundantStepException` en 3.x).
 

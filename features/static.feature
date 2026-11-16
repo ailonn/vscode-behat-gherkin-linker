@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-5 : statique, zéro PHP, zéro CLI. SPEC.md §5 : les globs de features et
 # de steps excluent `vendor/` et `node_modules/`.
 

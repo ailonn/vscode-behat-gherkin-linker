@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-1 (feature → définition) + AC-2 (définition → usages).
 # Mini-projet fictif partagé : `features/commandes.feature` (Gherkin FR, `# language: fr`)
 # et `CommandeSteps.php` (docblocks `@Given` / `@When` / `@Then`, groupes nommés `(?P<…>)`,

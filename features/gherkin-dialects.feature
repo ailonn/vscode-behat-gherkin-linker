@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-6 : tous les dialectes Gherkin officiels via l'export `dialects` de
 # @cucumber/gherkin (zéro mot-clé codé en dur), en-tête `# language:` inclus, guillemets
 # doubles conservés, Plan du scénario : interpolation des lignes Examples avant matching.

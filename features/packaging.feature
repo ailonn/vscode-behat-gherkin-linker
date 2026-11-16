@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-8 : packaging `vsce` + settings `gherkinBehat.enabled` /
 # `gherkinBehat.features` / `gherkinBehat.steps` / `gherkinBehat.orphans`.
 # AC-7 (« tests verts en CI ») est un critère méta (SPEC.md §7) : pas de feature dédiée.

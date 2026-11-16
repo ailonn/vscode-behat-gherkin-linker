@@ -1,3 +1,4 @@
+# language: fr
 # SPEC.md §3 — AC-4 : hover dans les 2 sens — step → FQCN / méthode / expression /
 # groupes nommés ↔ paramètres ; définition → usages. `@Transform` : parsing et affichage,
 # sans évaluation (SPEC.md §4).
