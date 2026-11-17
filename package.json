@@ -19,7 +19,18 @@
     "node": ">=20 <23"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
+  ],
+  "keywords": [
+    "gherkin",
+    "behat",
+    "cucumber",
+    "php",
+    "bdd",
+    "step definitions",
+    "navigation",
+    "diagnostics",
+    "monorepo"
   ],
   "activationEvents": [
     "onStartupFinished"
