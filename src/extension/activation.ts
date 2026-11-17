@@ -13,6 +13,7 @@ import { buildIndex } from "../core/index.js";
 import { parseFeature } from "../core/gherkin.js";
 import { scanPhp } from "../core/php.js";
 import type { DefinitionRef, Index, StepRef } from "../core/types.js";
+import { subtractExcluded } from "../globs.js";
 import { ALWAYS_EXCLUDED, readSettings } from "../settings.js";
 import {
   type ParseFailure,
@@ -67,7 +68,8 @@ export class IndexService {
   /**
    * Full rebuild (no incremental indexing — SPEC §5 v0): glob the workspace
    * with the configured patterns (always excluding vendor/ and
-   * node_modules/), parse the features, scan the PHP, build the pure index.
+   * node_modules/, and subtracting the user-excluded paths — AC-9),
+   * parse the features, scan the PHP, build the pure index.
    */
   async rebuild(): Promise<void> {
     const token = ++this.buildToken;
@@ -88,10 +90,22 @@ export class IndexService {
     const lineLengths = new Map<string, readonly number[]>();
     const seen = new Set<string>();
 
+    // AC-9: the user's exclude globs (gherkinBehat.exclude), resolved with
+    // the same engine as the inclusions — one set of paths per glob,
+    // subtracted in collect() at rebuild time.
+    const excludedSets: string[][] = [];
+    for (const glob of settings.exclude) {
+      const files = await vscode.workspace.findFiles(glob, ALWAYS_EXCLUDED);
+      excludedSets.push(files.map((f) => f.fsPath));
+    }
+
     const collect = async (
       globs: readonly string[],
       isFeature: boolean
     ): Promise<void> => {
+      // Inclusion candidates — in glob order, deduped across both
+      // collect() calls (`seen`).
+      const candidates: vscode.Uri[] = [];
       for (const glob of globs) {
         const files = await vscode.workspace.findFiles(glob, ALWAYS_EXCLUDED);
         for (const file of files) {
@@ -99,52 +113,65 @@ export class IndexService {
             continue;
           }
           seen.add(file.fsPath);
-          const relPath = relativeToRoot(root.fsPath, file.fsPath);
-          if (relPath === undefined) {
-            continue;
-          }
-          let source: string;
-          try {
-            source = new TextDecoder("utf-8").decode(
-              await vscode.workspace.fs.readFile(file)
-            );
-          } catch (err) {
-            // An unreadable file (EACCES, NFS failure, …) must not reject
-            // the whole rebuild (CRASH-003: the rejected Promise silently
-            // lost the entire index and every diagnostic) — diagnose the
-            // file, index the rest (partial index).
-            readFailures.push({
-              path: relPath,
-              reason:
-                err instanceof Error && err.message !== ""
-                  ? err.message
-                  : String(err),
-            });
-            continue;
-          }
-          // Full-line diagnostic ranges: the source is already read.
-          lineLengths.set(
-            relPath,
-            source.split(/\r?\n/).map((l) => l.length)
+          candidates.push(file);
+        }
+      }
+      // AC-9: subtract the user-excluded paths (one set per exclude glob,
+      // resolved with the same engine as the inclusions) — at rebuild
+      // time. The watchers stay inclusions-only (the FileSystemWatcher
+      // globPattern API has no `!` negation): a change in an excluded
+      // path triggers one rebuild with an identical result — the
+      // documented trade (SPEC §3 AC-9).
+      const kept = subtractExcluded(
+        candidates.map((f) => f.fsPath),
+        excludedSets
+      ).map((fsPath) => vscode.Uri.file(fsPath));
+      for (const file of kept) {
+        const relPath = relativeToRoot(root.fsPath, file.fsPath);
+        if (relPath === undefined) {
+          continue;
+        }
+        let source: string;
+        try {
+          source = new TextDecoder("utf-8").decode(
+            await vscode.workspace.fs.readFile(file)
           );
-          if (isFeature) {
-            const parsed = await parseFeature(source, relPath);
-            if (parsed.ok) {
-              // A single feature can carry 1M+ steps (the stress scale):
-              // `push(...steps)` would blow the call stack (V8 argument
-              // limit ≈ 65k) — collect one by one.
-              for (const step of parsed.steps) {
-                steps.push(step);
-              }
-            } else {
-              // ok:false (unparseable Gherkin) becomes a diagnostic —
-              // never a crash.
-              failures.push({ path: relPath, error: parsed.error });
+        } catch (err) {
+          // An unreadable file (EACCES, NFS failure, …) must not reject
+          // the whole rebuild (CRASH-003: the rejected Promise silently
+          // lost the entire index and every diagnostic) — diagnose the
+          // file, index the rest (partial index).
+          readFailures.push({
+            path: relPath,
+            reason:
+              err instanceof Error && err.message !== ""
+                ? err.message
+                : String(err),
+          });
+          continue;
+        }
+        // Full-line diagnostic ranges: the source is already read.
+        lineLengths.set(
+          relPath,
+          source.split(/\r?\n/).map((l) => l.length)
+        );
+        if (isFeature) {
+          const parsed = await parseFeature(source, relPath);
+          if (parsed.ok) {
+            // A single feature can carry 1M+ steps (the stress scale):
+            // `push(...steps)` would blow the call stack (V8 argument
+            // limit ≈ 65k) — collect one by one.
+            for (const step of parsed.steps) {
+              steps.push(step);
             }
           } else {
-            for (const definition of scanPhp(source, relPath)) {
-              definitions.push(definition);
-            }
+            // ok:false (unparseable Gherkin) becomes a diagnostic —
+            // never a crash.
+            failures.push({ path: relPath, error: parsed.error });
+          }
+        } else {
+          for (const definition of scanPhp(source, relPath)) {
+            definitions.push(definition);
           }
         }
       }

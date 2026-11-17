@@ -56,6 +56,7 @@ v0.1.0 is distributed as a VSIX on GitHub Releases (no marketplace publication i
 | `gherkinBehat.enabled` | boolean | `true` | Index the workspace (navigation + diagnostics). `false`: no file is read, no diagnostic is emitted. |
 | `gherkinBehat.features` | string or array | `**/*.feature` | Glob(s) of Gherkin feature files to index. |
 | `gherkinBehat.steps` | string or array | `**/*.php` | Glob(s) of PHP step definition files to index. |
+| `gherkinBehat.exclude` | string or array | `[]` | Glob(s) of feature/step files to **exclude** from the index (monorepos) — in addition to the always-excluded `vendor/` and `node_modules/`. The watcher is inclusions-only: a change in an excluded path triggers one rebuild with an identical result (documented trade). |
 | `gherkinBehat.orphans` | boolean | `true` | Emit info diagnostics for orphan step definitions (no matching step). |
 
 `vendor/` and `node_modules/` are always excluded, whatever the globs.

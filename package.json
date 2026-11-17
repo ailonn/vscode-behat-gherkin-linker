@@ -56,6 +56,17 @@
           },
           "description": "Glob(s) of PHP step definition files to index. vendor/ and node_modules/ are always excluded. v0: only the first workspace root is indexed."
         },
+        "gherkinBehat.exclude": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob(s) of feature/step files to exclude from the index (monorepos) — in addition to the always-excluded vendor/ and node_modules/. Same glob engine as gherkinBehat.features / gherkinBehat.steps. The file watcher is inclusions-only: a change in an excluded path triggers one rebuild with an identical result (documented trade)."
+        },
         "gherkinBehat.orphans": {
           "type": "boolean",
           "default": true,
