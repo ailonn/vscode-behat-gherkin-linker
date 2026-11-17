@@ -78,6 +78,9 @@ const MANIFEST: Record<string, readonly string[]> = {
     "AC-8: gherkinBehat.orphans=false → the orphan info is off (errors intact) → on",
     "AC-8: gherkinBehat.enabled=false → off switch (diagnostics cleared, providers empty) → on",
   ],
+  "AC-9": [
+    "AC-9: exclude — the excluded files are never indexed, the rebuild keeps an identical result, the restore re-indexes",
+  ],
 };
 
 /** The only non-AC prefixes allowed in e2e titles (harness smoke). */

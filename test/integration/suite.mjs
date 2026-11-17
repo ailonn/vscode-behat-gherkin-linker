@@ -791,6 +791,267 @@ test("AC-8: gherkinBehat.enabled=false → off switch (diagnostics cleared, prov
   );
 });
 
+// --- AC-9: gherkinBehat.exclude (monorepos) -----------------------------------
+// A setting gate (run before CRASH-003): mutates the workspace configuration
+// and creates scratch fixtures, all restored in `finally`.
+
+test("AC-9: exclude — the excluded files are never indexed, the rebuild keeps an identical result, the restore re-indexes", async () => {
+  await waitForActivation();
+  const root = workspaceRoot().fsPath;
+  const legacyDir = join(root, "legacy");
+  const legacyFeatureUri = vscode.Uri.file(join(legacyDir, "legacy_app.feature"));
+  const legacyPhpUri = vscode.Uri.file(join(legacyDir, "LegacySteps.php"));
+  // The duplicate trap: LegacySteps.php carries the EXACTLY same pattern as
+  // the definition of CommandeSteps.php (@When line 15 (1-based) = 14
+  // (0-based)) — the moment it is indexed, a duplicate warning fires on
+  // both; the moment it is excluded, the warning vanishes. Sharpest proof
+  // of (de)indexing.
+  const legacyFeature = [
+    "# language: fr",
+    "Fonctionnalité: Application legacy",
+    "",
+    "  Scénario: Remboursement",
+    "    Quand je demande le remboursement \"CMD-7777\"",
+    "",
+  ].join("\n");
+  const legacyPhp = [
+    "<?php",
+    "",
+    "namespace App\\Legacy;",
+    "",
+    "class LegacySteps",
+    "{",
+    "    /**",
+    "     * @When /je valide la commande \"(?P<numero>[\\w.-]+)\"/",
+    "     */",
+    "    public function jeValide(string $numero)",
+    "    {",
+    "    }",
+    "}",
+    "",
+  ].join("\n");
+  const commandes = await vscode.workspace.openTextDocument(docUri("commandes.feature"));
+  const php = await vscode.workspace.openTextDocument(docUri("CommandeSteps.php"));
+  const config = vscode.workspace.getConfiguration("gherkinBehat");
+  const scratch = join(root, "ac9_rebuild_scratch.feature");
+  mkdirSync(legacyDir, { recursive: true });
+  try {
+    // 1. Scratch fixtures on disk (not excluded yet) — the positive
+    // control: both must be indexed and diagnosed (undefined step + the
+    // duplicate warning on CommandeSteps).
+    await writeFile(legacyFeatureUri.fsPath, legacyFeature, "utf8");
+    await writeFile(legacyPhpUri.fsPath, legacyPhp, "utf8");
+    await waitFor(
+      "AC-9: before exclude — the legacy files are indexed (undefined step + duplicate warning)",
+      async () =>
+        vscode.languages
+          .getDiagnostics(legacyFeatureUri)
+          .some((d) => d.severity === ERROR) &&
+        vscode.languages
+          .getDiagnostics(php.uri)
+          .some((d) => d.severity === WARNING),
+      30000 // watcher + debounce + rebuild budget
+    );
+
+    // 2. Exclusion: legacy/** leaves the index — the legacy files lose
+    // their diagnostics (publishDiagnostics clears + re-publishes) and the
+    // duplicate warning on CommandeSteps disappears; the reference index is
+    // untouched.
+    await config.update("exclude", "legacy/**", vscode.ConfigurationTarget.Workspace);
+    await waitFor(
+      "AC-9: excluded — the legacy files carry no diagnostic",
+      async () =>
+        vscode.languages.getDiagnostics(legacyFeatureUri).length === 0 &&
+        vscode.languages.getDiagnostics(legacyPhpUri).length === 0,
+      30000
+    );
+    assert.equal(
+      vscode.languages.getDiagnostics(legacyFeatureUri).length,
+      0,
+      "the excluded feature is ignored, not signaled"
+    );
+    assert.equal(
+      vscode.languages.getDiagnostics(legacyPhpUri).length,
+      0,
+      "the excluded PHP file contributes no definition"
+    );
+    assert.equal(
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .filter((d) => d.severity === WARNING).length,
+      0,
+      "no duplicate warning on CommandeSteps.php — its definition is the only one indexed again"
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .some((d) => d.severity === INFO && d.range.start.line === 30),
+      "the orphan info (CommandeSteps.php line 31 (1-based)) is intact"
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+      "the reference undefined step is still diagnosed"
+    );
+    // The rest of the index is intact — navigation still resolves:
+    const defs = toLocations(
+      await vscode.commands.executeCommand(
+        "vscode.executeDefinitionProvider",
+        commandes.uri,
+        new vscode.Position(5, 10)
+      )
+    );
+    assert.ok(
+      defs.some(
+        (l) => l.uri.fsPath.endsWith("CommandeSteps.php") && l.range.start.line === 14
+      ),
+      "navigation still resolves the reference step (the exclusion touches nothing else)"
+    );
+
+    // 3. A change in an excluded file → one rebuild → identical result.
+    // The legacy file gains a second undefined step (it would be diagnosed
+    // if the exclusion failed at rebuild time); the root-level scratch
+    // forces the rebuild whose publication is the proof it ran (the AC-5
+    // vendor pattern — the same publish would show the legacy diagnostics
+    // if the exclusion broke). The watchers stay inclusions-only (the
+    // `!` negation is not supported by the globPattern API): the change
+    // in the excluded path triggers the rebuild, the exclusion is applied
+    // at rebuild time — the documented trade (SPEC §3 AC-9).
+    await writeFile(
+      legacyFeatureUri.fsPath,
+      legacyFeature +
+        "  Scénario: Remboursement bis\n    Quand je demande le remboursement \"CMD-8888\"\n",
+      "utf8"
+    );
+    await writeFile(
+      scratch,
+      "Feature: Probe\n\n  Scenario: Scratch\n    Given a step that exists nowhere\n",
+      "utf8"
+    );
+    const scratchDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(scratch));
+    await waitFor(
+      "AC-9: the rebuild ran after the excluded file changed (the scratch step is diagnosed)",
+      async () =>
+        vscode.languages
+          .getDiagnostics(scratchDoc.uri)
+          .some((d) => d.severity === ERROR),
+      30000
+    );
+    assert.equal(
+      vscode.languages.getDiagnostics(legacyFeatureUri).length,
+      0,
+      "the changed excluded file is still not diagnosed (identical result)"
+    );
+    assert.equal(
+      vscode.languages.getDiagnostics(legacyPhpUri).length,
+      0,
+      "the excluded PHP file is still not diagnosed (identical result)"
+    );
+    assert.equal(
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .filter((d) => d.severity === WARNING).length,
+      0,
+      "still no duplicate warning (identical result)"
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+      "the reference diagnostics are unchanged (identical result)"
+    );
+    await rm(scratch, { force: true });
+
+    // 4. Restore (exclude = []): the legacy files are indexed again —
+    // both undefined steps are diagnosed, the duplicate warning fires.
+    await config.update("exclude", [], vscode.ConfigurationTarget.Workspace);
+    await waitFor(
+      "AC-9: restored — the legacy files are indexed again (error + duplicate warning)",
+      async () =>
+        vscode.languages
+          .getDiagnostics(legacyFeatureUri)
+          .some((d) => d.severity === ERROR) &&
+        vscode.languages
+          .getDiagnostics(php.uri)
+          .some((d) => d.severity === WARNING),
+      30000
+    );
+    const legacyDiag = vscode.languages.getDiagnostics(legacyFeatureUri);
+    assert.equal(
+      legacyDiag.filter((d) => d.severity === ERROR).length,
+      2,
+      `both undefined legacy steps are diagnosed again: ${JSON.stringify(
+        legacyDiag.map((d) => d.message)
+      )}`
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .some((d) => d.severity === WARNING && d.range.start.line === 14),
+      "the duplicate warning is back on CommandeSteps.php line 15 (1-based)"
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(legacyPhpUri)
+        .some((d) => d.severity === WARNING && d.range.start.line === 7),
+      "the duplicate warning is on LegacySteps.php line 8 (1-based) too"
+    );
+  } finally {
+    await config.update("exclude", [], vscode.ConfigurationTarget.Workspace).catch(() => {});
+    await rm(legacyDir, { recursive: true, force: true });
+    await rm(scratch, { force: true });
+  }
+  // Settle the index to the reference state. The legacy files are deleted in
+  // a directory created after the watchers were set up: on Linux (verified on
+  // VS Code 1.146.0), their deletion events are not delivered — the index
+  // keeps them stale until a rebuild. A root-level scratch file forces that
+  // rebuild (root-level create/delete events are reliably delivered — the
+  // AC-5 vendor pattern): its error diagnostic proves the rebuild ran, and
+  // the reference state proves the stale legacy entries are gone.
+  await writeFile(
+    scratch,
+    "Feature: Probe\n\n  Scenario: Scratch\n    Given a step that exists nowhere\n",
+    "utf8"
+  );
+  const scratchDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(scratch));
+  try {
+    await waitFor(
+      "AC-9: settle — the post-cleanup rebuild ran (scratch step diagnosed) and the stale legacy entries are gone",
+      async () =>
+        vscode.languages
+          .getDiagnostics(scratchDoc.uri)
+          .some((d) => d.severity === ERROR) &&
+        vscode.languages
+          .getDiagnostics(php.uri)
+          .every((d) => d.severity !== WARNING),
+      30000
+    );
+    assert.ok(
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR),
+      "the reference diagnostics hold after the cleanup"
+    );
+  } finally {
+    await rm(scratch, { force: true });
+  }
+  // The scratch deletion (a root-level file — the event is delivered) runs
+  // the last rebuild: the reference state, minus the scratch, is back.
+  await waitFor(
+    "AC-9: after the cleanup — the reference state is back",
+    async () =>
+      vscode.languages.getDiagnostics(scratchDoc.uri).length === 0 &&
+      vscode.languages
+        .getDiagnostics(commandes.uri)
+        .some((d) => d.severity === ERROR) &&
+      vscode.languages
+        .getDiagnostics(php.uri)
+        .every((d) => d.severity !== WARNING),
+    30000
+  );
+});
+
 // --- CRASH-003: unreadable file → per-file diagnostic + partial index --------
 // Run last (like the setting gates): mutates a workspace file's permission and
 // the orphans setting, both restored in `finally`.

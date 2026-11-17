@@ -8,8 +8,8 @@ automated, what stays manual, what the next cycle absorbs.
 | Control | Job | Trigger |
 |---|---|---|
 | build + typecheck (`pnpm run build` + `pnpm run typecheck:all`) | `check` | push/PR |
-| unit: core + shell + packaging lock + stress generator CA + mapping guard + AC mapping guard + docstring guard (210 tests) | `check` | push/PR |
-| e2e 23 + restart 2 (test-electron on xvfb — incl. the CRASH-003 read-failure lock) | `check` | push/PR |
+| unit: core + shell + packaging lock + stress generator CA + mapping guard + AC mapping guard + docstring guard (223 tests) | `check` | push/PR |
+| e2e 24 + restart 2 (test-electron on xvfb — incl. the CRASH-003 read-failure lock + the AC-9 exclude gate) | `check` | push/PR |
 | stress smoke 100×100 (on xvfb — test-electron needs an X server; bounded by the locked 55 s budget) | `check` | push/PR |
 | vsix content (no test/features/qa/SPEC in the vsix) | `check` | push/PR |
 | stress full 1000×1000 (on xvfb — wall-time budget 55 s) + vsix pack (artifact) | `release` | tag `v*` |
