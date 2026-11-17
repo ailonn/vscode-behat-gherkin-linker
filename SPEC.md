@@ -171,7 +171,13 @@ qa/
 - **Full index rebuild on change** in v0 (no incremental) — simplicity first; the shell
   **debounces and coalesces** rebuilds (last-wins token: a stale build never overwrites
   a fresher one); the glob for features/steps **excludes `vendor/` and `node_modules/`**
-  (index queries and watcher events). **v0 limitation: only the first workspace root is
+  (index queries and watcher events). The rebuild is triggered by **file events**
+  (create/change/delete of the inclusion globs). **v0 limitation (verified on VS Code
+  1.146.0, Linux): a deletion event is not delivered for a file in a folder created
+  after the watchers were set up** (creation and change are delivered) — the deleted
+  file leaves the index at the next rebuild (the next file event anywhere, or a
+  settings change); user-facing wording: README "What the extension does not resolve,
+  and why". **v0 limitation: only the first workspace root is
   indexed** — multi-root workspaces are not supported yet. Budgets: reference fixture of fixed size
   (N steps / M definitions / K features) → **wall-time < 500 ms, asserted in unit
   tests**; stress 1 000 × 1 000 (chat-noir case) → no crash + its own wall-time budget,
