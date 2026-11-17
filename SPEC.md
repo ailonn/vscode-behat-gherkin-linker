@@ -64,6 +64,7 @@ One Gherkin scenario per AC in `features/`.
 | AC-6 | Gherkin **all official dialects** — FR, EN and the rest via `# language:`; keywords consumed from the parser's `dialects` export (nothing hardcoded); a feature **without** a `# language:` header is parsed in English (the parser's official default — documented in the README); double quotes in step text; tested by sample (FR + EN + ≥ 1 third dialect) | `features/gherkin-dialects.feature` |
 | AC-7 | Tests green in CI: the unit + integration suite covers each AC (fixtures: a generic FR PHP/Behat project, no personal data) | meta — §7 |
 | AC-8 | Packaging: `vsce` packable; settings `gherkinBehat.enabled` (boolean, default `true` — off switch: no file is read, no diagnostic is emitted) / `gherkinBehat.features` (glob, string or array, default `**/*.feature`) / `gherkinBehat.steps` (glob, string or array, default `**/*.php`) / `gherkinBehat.orphans` (boolean, default `true`) | `features/packaging.feature` |
+| AC-9 | Monorepo exclusion: `gherkinBehat.exclude` (glob, string or array, default empty) — additional feature/step files excluded from the index (same glob engine as the inclusions; `vendor/` + `node_modules/` stay always excluded). The watcher is inclusions-only (the `!` negation is not supported by the FileSystemWatcher globPattern API): a change in an excluded path triggers one rebuild with an identical result — documented trade | `features/exclusion.feature` |
 
 ## 4. Non-goals (v0)
 
