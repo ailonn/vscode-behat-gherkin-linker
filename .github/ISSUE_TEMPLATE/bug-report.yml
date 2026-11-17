@@ -1,0 +1,40 @@
+name: Bug report
+description: The extension does something wrong — a wrong navigation, a diagnostic that should not be there (or is missing), or a crash.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What the extension did — the wrong navigation target, the diagnostic that should not be there (or is missing), the editor freeze/crash.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest workspace that reproduces it — the .feature file content, the PHP definition (annotation + method), and the exact click/hover that fails. A private gist is fine if the project is confidential.
+    validations:
+      required: true
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code version
+      description: Help → About (e.g. 1.95.2).
+    validations:
+      required: true
+  - type: textarea
+    id: workspace
+    attributes:
+      label: Workspace shape + settings
+      description: The workspace shape (monorepo? which folders?) and the gherkinBehat.* settings if any (enabled, features, steps, exclude, orphans).
+    validations:
+      required: false
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+      description: The gherkin-behat-linker version (Extensions panel, or the "version" of the installed extension).
+    validations:
+      required: true

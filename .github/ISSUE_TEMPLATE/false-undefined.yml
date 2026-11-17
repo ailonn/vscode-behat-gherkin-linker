@@ -1,0 +1,26 @@
+name: Step wrongly reported as undefined
+description: A step is marked undefined (red) but you believe it should match a definition.
+title: "[False undefined] "
+labels: [bug]
+body:
+  - type: textarea
+    id: step
+    attributes:
+      label: The step
+      description: The file + line + the exact text of the step (and its `# language:` header if any).
+    validations:
+      required: true
+  - type: textarea
+    id: definition
+    attributes:
+      label: The definition you expect to match
+      description: The file + the annotation line + the exact expression (e.g. `@When /je valide la commande "(?P<numero>[\w.-]+)"/`) and the method signature.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why a match is expected
+      description: What makes you expect Behat to match this step to this definition? If Behat itself runs the step without an UndefinedStepException, that is the proof. If Behat reports the step undefined too, the diagnostic is correct — the issue is in the Behat setup (context, class, expression), not in the extension.
+    validations:
+      required: true
